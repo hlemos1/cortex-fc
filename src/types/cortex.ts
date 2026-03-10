@@ -210,6 +210,107 @@ export interface CfoOutput {
   reasoning: string;
 }
 
+// Analista specific
+export interface AnalistaInput {
+  matchId: string;
+  homeTeam: string;
+  awayTeam: string;
+  competition: string;
+  formation?: string;
+  focusPlayerIds?: string[];
+  matchEvents?: Record<string, unknown>;
+  statsData?: Record<string, unknown>;
+  additionalContext?: string;
+}
+
+export interface AnalistaOutput {
+  tacticalSummary: string;
+  dominantPatterns: Array<{
+    pattern: string;
+    frequency: number;
+    effectiveness: number; // 0-100
+    description: string;
+  }>;
+  playerPerformances: Array<{
+    playerId: string;
+    name: string;
+    rating: number; // 0-10
+    heatmapZones: string[];
+    keyActions: string[];
+    tacticalContribution: number; // 0-100
+    physicalOutput: number; // 0-100
+    strengths: string[];
+    weaknesses: string[];
+  }>;
+  pressAnalysis: {
+    ppda: number;
+    pressIntensity: number; // 0-100
+    pressTriggers: string[];
+    pressEffectiveness: number; // 0-100
+  };
+  transitionAnalysis: {
+    attackingSpeed: number; // 0-100
+    defensiveRecovery: number; // 0-100
+    counterAttackQuality: number; // 0-100
+  };
+  setPlayAnalysis: {
+    offensiveThreats: string[];
+    defensiveVulnerabilities: string[];
+  };
+  recommendations: string[];
+  reasoning: string;
+}
+
+// Board Advisor specific
+export interface BoardAdvisorInput {
+  clubName: string;
+  currentBudget: number; // millions EUR
+  salaryCap: number; // millions EUR per year
+  strategicGoals: string[];
+  currentSquadAssessment: string;
+  windowType: "summer" | "winter";
+  leagueContext: string;
+  existingTargets?: string[];
+  competitorsActivity?: string;
+  financialConstraints?: string;
+  additionalContext?: string;
+}
+
+export interface BoardAdvisorOutput {
+  executiveSummary: string;
+  windowStrategy: {
+    priority: "AGGRESSIVE" | "BALANCED" | "CONSERVATIVE" | "REBUILD";
+    reasoning: string;
+  };
+  squadPriorities: Array<{
+    position: PlayerCluster;
+    urgency: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+    currentDepth: number;
+    idealProfile: string;
+    budgetAllocation: number; // millions EUR suggested
+  }>;
+  financialOverview: {
+    recommendedSpend: number;
+    recommendedSales: number;
+    netPosition: number;
+    ffpHeadroom: number;
+    wageImpact: number;
+  };
+  riskAssessment: Array<{
+    risk: string;
+    probability: "HIGH" | "MEDIUM" | "LOW";
+    impact: "HIGH" | "MEDIUM" | "LOW";
+    mitigation: string;
+  }>;
+  actionPlan: Array<{
+    action: string;
+    timeline: string;
+    priority: number; // 1-5
+    expectedImpact: string;
+  }>;
+  reasoning: string;
+}
+
 // Temporal Evolution
 export interface TemporalDataPoint {
   date: Date;
