@@ -1,8 +1,13 @@
-"use client"
-
 import { AlertTriangle, Clock, Shield } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { mockAlerts } from "@/lib/mock-data"
+
+export interface Alert {
+  id: string
+  title: string
+  description: string
+  severity: "high" | "medium" | "low"
+  date: string
+}
 
 function getSeverityColor(severity: string) {
   switch (severity) {
@@ -22,7 +27,7 @@ function getSeverityIcon(severity: string) {
   }
 }
 
-export function AlertsPanel() {
+export function AlertsPanel({ alerts }: { alerts: Alert[] }) {
   return (
     <Card className="bg-zinc-900/80 border-zinc-800">
       <CardHeader className="pb-2">
@@ -33,7 +38,7 @@ export function AlertsPanel() {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {mockAlerts.map((alert) => (
+          {alerts.map((alert) => (
             <div
               key={alert.id}
               className={`rounded-lg border p-3 ${getSeverityColor(alert.severity)}`}

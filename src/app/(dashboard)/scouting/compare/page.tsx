@@ -1,7 +1,3 @@
-"use client"
-
-import { Suspense, useMemo } from "react"
-import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -12,80 +8,96 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { NeuralRadar } from "@/components/cortex/NeuralRadar"
 import { AlgorithmBars } from "@/components/cortex/AlgorithmBars"
 import { VxRxScatter } from "@/components/cortex/VxRxScatter"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
-import { mockPlayers, getLatestAnalysis, getDecisionColor } from "@/lib/mock-data"
-import type { CortexDecision, NeuralLayers } from "@/types/cortex"
+import { getPlayerById } from "@/db/queries"
+import { toNeuralLayers, toAlgorithmScores, formatPlayerForUI } from "@/lib/db-transforms"
+import type { CortexDecision, NeuralLayers, AlgorithmScores } from "@/types/cortex"
+
+interface ComparePlayer {
+  id: string
+  name: string
+  age: number
+  nationality: string
+  position: string
+  positionCluster: string
+  club: string
+  marketValue: number
+  salary: number
+  contractEnd: string
+  scn?: number
+  decision?: CortexDecision
+  vx?: number
+  rx?: number
+  layers?: NeuralLayers
+  algorithms?: AlgorithmScores
+  confidence?: number
+  reasoning?: string
+}
 
 const radarColors = ["#10b981", "#3b82f6", "#f59e0b"]
 
-export default function ComparePage() {
-  return (
-    <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="text-zinc-500 text-sm">Carregando comparação...</div></div>}>
-      <CompareContent />
-    </Suspense>
-  )
+export default async function ComparePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ids?: string }>
+}) {
+  const params = await searchParams
+  const ids = params.ids?.split(",").filter(Boolean) ?? []
+
+  const players: ComparePlayer[] = []
+
+  for (const id of ids) {
+    const player = await getPlayerById(id)
+    if (!player) continue
+
+    const base = formatPlayerForUI(player)
+    const latestAnalysis = player.analyses[0] ?? null
+
+    const entry: ComparePlayer = {
+      id: base.id,
+      name: base.name,
+      age: base.age ?? 0,
+      nationality: base.nationality,
+      position: base.position,
+      positionCluster: base.positionCluster,
+      club: base.club,
+      marketValue: base.marketValue,
+      salary: base.salary,
+      contractEnd: base.contractEnd,
+    }
+
+    if (latestAnalysis) {
+      const layers = toNeuralLayers(latestAnalysis)
+      const algorithms = toAlgorithmScores(latestAnalysis)
+      entry.scn = algorithms.SCN_plus
+      entry.decision = latestAnalysis.decision as CortexDecision
+      entry.vx = latestAnalysis.vx
+      entry.rx = latestAnalysis.rx
+      entry.layers = layers
+      entry.algorithms = algorithms
+      entry.confidence = latestAnalysis.confidence
+      entry.reasoning = latestAnalysis.reasoning
+    }
+
+    players.push(entry)
+  }
+
+  return <CompareContent players={players} />
 }
 
-function CompareContent() {
-  const searchParams = useSearchParams()
-  const ids = searchParams.get("ids")?.split(",") ?? []
-
-  const players = useMemo(() => {
-    return ids
-      .map((id) => {
-        const player = mockPlayers.find((p) => p.id === id)
-        if (!player) return null
-        const analysis = getLatestAnalysis(id)
-        return {
-          ...player,
-          scn: analysis?.algorithms.SCN_plus,
-          decision: analysis?.decision,
-          vx: analysis?.vx,
-          rx: analysis?.rx,
-          layers: analysis?.layers,
-          algorithms: analysis?.algorithms,
-          confidence: analysis?.confidence,
-          reasoning: analysis?.reasoning,
-        }
-      })
-      .filter(Boolean) as Array<{
-        id: string
-        name: string
-        age: number
-        nationality: string
-        position: string
-        positionCluster: string
-        club: string
-        marketValue: number
-        salary: number
-        contractEnd: string
-        scn?: number
-        decision?: CortexDecision
-        vx?: number
-        rx?: number
-        layers?: NeuralLayers
-        algorithms?: import("@/types/cortex").AlgorithmScores
-        confidence?: number
-        reasoning?: string
-      }>
-  }, [ids])
-
-  // VxRx scatter data for selected players
-  const scatterData = useMemo(() => {
-    return players
-      .filter((p) => p.vx !== undefined && p.rx !== undefined)
-      .map((p) => ({
-        name: p.name,
-        vx: p.vx!,
-        rx: p.rx!,
-        decision: p.decision!,
-        scn: p.scn,
-      }))
-  }, [players])
+function CompareContent({ players }: { players: ComparePlayer[] }) {
+  const scatterData = players
+    .filter((p) => p.vx !== undefined && p.rx !== undefined)
+    .map((p) => ({
+      name: p.name,
+      vx: p.vx!,
+      rx: p.rx!,
+      decision: p.decision!,
+      scn: p.scn,
+    }))
 
   if (players.length === 0) {
     return (
@@ -202,14 +214,14 @@ function CompareContent() {
               </thead>
               <tbody>
                 {[
-                  { label: "Idade", getter: (p: typeof players[0]) => `${p.age}`, unit: "anos" },
-                  { label: "Valor de Mercado", getter: (p: typeof players[0]) => `\u20AC${p.marketValue}M`, unit: "" },
-                  { label: "Salario Anual", getter: (p: typeof players[0]) => `\u20AC${p.salary}M`, unit: "" },
-                  { label: "Contrato ate", getter: (p: typeof players[0]) => p.contractEnd.slice(0, 7), unit: "" },
-                  { label: "Vx (Valor)", getter: (p: typeof players[0]) => p.vx?.toFixed(2) ?? "--", colorClass: "text-emerald-400" },
-                  { label: "Rx (Risco)", getter: (p: typeof players[0]) => p.rx?.toFixed(2) ?? "--", colorClass: "text-red-400" },
-                  { label: "SCN+", getter: (p: typeof players[0]) => p.scn?.toString() ?? "--", colorClass: "text-cyan-400" },
-                  { label: "Confianca", getter: (p: typeof players[0]) => p.confidence ? `${p.confidence}%` : "--", colorClass: "text-amber-400" },
+                  { label: "Idade", getter: (p: ComparePlayer) => `${p.age}`, unit: "anos" },
+                  { label: "Valor de Mercado", getter: (p: ComparePlayer) => `\u20AC${p.marketValue}M`, unit: "" },
+                  { label: "Salario Anual", getter: (p: ComparePlayer) => `\u20AC${p.salary}M`, unit: "" },
+                  { label: "Contrato ate", getter: (p: ComparePlayer) => p.contractEnd.slice(0, 7), unit: "" },
+                  { label: "Vx (Valor)", getter: (p: ComparePlayer) => p.vx?.toFixed(2) ?? "--", colorClass: "text-emerald-400" },
+                  { label: "Rx (Risco)", getter: (p: ComparePlayer) => p.rx?.toFixed(2) ?? "--", colorClass: "text-red-400" },
+                  { label: "SCN+", getter: (p: ComparePlayer) => p.scn?.toString() ?? "--", colorClass: "text-cyan-400" },
+                  { label: "Confianca", getter: (p: ComparePlayer) => p.confidence ? `${p.confidence}%` : "--", colorClass: "text-amber-400" },
                 ].map((metric) => (
                   <tr key={metric.label} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
                     <td className="py-2.5 px-3 text-xs text-zinc-500">{metric.label}</td>

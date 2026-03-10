@@ -9,15 +9,65 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { VxRxScatter } from "@/components/cortex/VxRxScatter"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
-import { getDashboardStats, getAnalyses } from "@/db/queries"
+import { getDashboardStats, getAnalyses, getPlayers } from "@/db/queries"
 import { toScatterPoint, toAlgorithmScores, formatDate } from "@/lib/db-transforms"
 import { AlertsPanel } from "./AlertsPanel"
+import type { Alert } from "./AlertsPanel"
 
 export default async function DashboardPage() {
-  const [stats, analyses] = await Promise.all([
+  const [stats, analyses, allPlayers] = await Promise.all([
     getDashboardStats(),
     getAnalyses(),
+    getPlayers(),
   ])
+
+  // Generate alerts from real DB data
+  const alerts: Alert[] = []
+  const now = new Date()
+  const sixMonthsFromNow = new Date(now)
+  sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
+
+  // Players with contracts expiring within 6 months
+  for (const player of allPlayers) {
+    if (player.contractUntil) {
+      const contractDate = new Date(player.contractUntil)
+      if (contractDate <= sixMonthsFromNow && contractDate >= now) {
+        alerts.push({
+          id: `contract-${player.id}`,
+          title: "Contrato expirando",
+          description: `${player.name} tem contrato ate ${formatDate(contractDate)}. Avaliar renovacao ou venda.`,
+          severity: "high",
+          date: formatDate(contractDate),
+        })
+      }
+    }
+  }
+
+  // Latest analysis decisions
+  for (const analysis of analyses.slice(0, 5)) {
+    const playerName = analysis.player?.name ?? "Desconhecido"
+    alerts.push({
+      id: `analysis-${analysis.id}`,
+      title: `Novo parecer: ${analysis.decision} — ${playerName}`,
+      description: analysis.reasoning
+        ? analysis.reasoning.slice(0, 120)
+        : `Analise neural concluida com decisao ${analysis.decision}.`,
+      severity: "medium",
+      date: formatDate(analysis.createdAt),
+    })
+  }
+
+  // Recent scouting activity
+  for (const analysis of analyses.slice(5, 8)) {
+    const playerName = analysis.player?.name ?? "Desconhecido"
+    alerts.push({
+      id: `scouting-${analysis.id}`,
+      title: `Atividade de scouting: ${playerName}`,
+      description: `Nova avaliacao registrada para ${playerName} (SCN+ ${analysis.scnPlus ?? "—"}).`,
+      severity: "low",
+      date: formatDate(analysis.createdAt),
+    })
+  }
 
   const statsCards = [
     {
@@ -129,8 +179,8 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Alerts Panel — still uses mock data */}
-        <AlertsPanel />
+        {/* Alerts Panel */}
+        <AlertsPanel alerts={alerts} />
       </div>
 
       {/* Recent Analyses Table */}

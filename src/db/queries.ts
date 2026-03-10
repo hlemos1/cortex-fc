@@ -57,6 +57,33 @@ export async function getPlayerById(id: string) {
   return player ?? null;
 }
 
+/**
+ * Get multiple players by their IDs with club and latest analysis
+ */
+export async function getPlayersByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const results = await Promise.all(
+    ids.map((id) =>
+      db.query.players.findFirst({
+        where: eq(players.id, id),
+        with: {
+          currentClub: true,
+          analyses: {
+            orderBy: [desc(neuralAnalyses.createdAt)],
+            limit: 1,
+            with: {
+              clubContext: true,
+            },
+          },
+        },
+      })
+    )
+  );
+
+  return results.filter(Boolean);
+}
+
 // ============================================
 // ANALYSES
 // ============================================
@@ -105,6 +132,35 @@ export async function getAnalysisById(id: string) {
 export async function createAnalysis(data: typeof neuralAnalyses.$inferInsert) {
   const [inserted] = await db.insert(neuralAnalyses).values(data).returning();
   return inserted;
+}
+
+/**
+ * Get data needed to generate alerts (expiring contracts, recent decisions)
+ */
+export async function getAlertData() {
+  const sixMonthsFromNow = new Date();
+  sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+
+  // Players with expiring contracts
+  const expiringContracts = await db.query.players.findMany({
+    where: sql`${players.contractUntil} IS NOT NULL AND ${players.contractUntil} < ${sixMonthsFromNow}`,
+    with: {
+      currentClub: true,
+    },
+    orderBy: [players.contractUntil],
+    limit: 5,
+  });
+
+  // Recent analyses with high-impact decisions
+  const recentDecisions = await db.query.neuralAnalyses.findMany({
+    with: {
+      player: true,
+    },
+    orderBy: [desc(neuralAnalyses.createdAt)],
+    limit: 5,
+  });
+
+  return { expiringContracts, recentDecisions };
 }
 
 // ============================================
