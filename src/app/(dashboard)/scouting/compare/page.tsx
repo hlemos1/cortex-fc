@@ -112,12 +112,14 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
         </div>
         <Card className="bg-zinc-900/80 border-zinc-800">
           <CardContent className="py-16 text-center">
-            <GitCompare className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+            <div className="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center mx-auto mb-4">
+              <GitCompare className="w-8 h-8 text-zinc-700" />
+            </div>
             <p className="text-zinc-400 text-sm">
               Nenhum jogador selecionado para comparacao.
             </p>
             <Link href="/scouting">
-              <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20">
                 Selecionar Jogadores
               </Button>
             </Link>
@@ -137,16 +139,16 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-slide-down">
         <div className="flex items-center gap-3">
           <Link href="/scouting">
-            <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-zinc-300">
+            <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50">
               <ArrowLeft className="w-4 h-4 mr-1" />
               Voltar
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">
+            <h1 className="text-2xl font-bold tracking-tight gradient-text">
               Comparacao de Alvos
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
@@ -159,12 +161,24 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
       {/* Player Header Cards */}
       <div className={`grid ${gridCols} gap-4`}>
         {players.map((player, idx) => (
-          <Card key={player.id} className="bg-zinc-900/80 border-zinc-800">
-            <CardContent className="p-4">
+          <Card
+            key={player.id}
+            className="bg-zinc-900/80 border-zinc-800/80 card-hover animate-slide-up overflow-hidden relative"
+            style={{ animationDelay: `${idx * 100}ms` }}
+          >
+            {/* Colored top border */}
+            <div
+              className="absolute inset-x-0 top-0 h-1 rounded-t-xl"
+              style={{ background: `linear-gradient(90deg, ${radarColors[idx]}60, ${radarColors[idx]}20)` }}
+            />
+            <CardContent className="p-4 pt-5">
               <div className="flex items-center gap-3">
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: `${radarColors[idx]}20` }}
+                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 border-2"
+                  style={{
+                    backgroundColor: `${radarColors[idx]}15`,
+                    borderColor: `${radarColors[idx]}30`,
+                  }}
                 >
                   <User className="w-6 h-6" style={{ color: radarColors[idx] }} />
                 </div>
@@ -190,7 +204,8 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
       </div>
 
       {/* Key Metrics Comparison Table */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
+      <Card className="bg-zinc-900/80 border-zinc-800/80 animate-slide-up stagger-2 overflow-hidden relative">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -201,12 +216,12 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-zinc-800">
-                  <th className="text-left py-2 px-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                <tr className="border-b border-zinc-800 bg-zinc-900/50">
+                  <th className="text-left py-2.5 px-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                     Metrica
                   </th>
                   {players.map((p, idx) => (
-                    <th key={p.id} className="text-center py-2 px-3 text-xs font-medium" style={{ color: radarColors[idx] }}>
+                    <th key={p.id} className="text-center py-2.5 px-3 text-xs font-semibold" style={{ color: radarColors[idx] }}>
                       {p.name.split(" ").pop()}
                     </th>
                   ))}
@@ -222,8 +237,13 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
                   { label: "Rx (Risco)", getter: (p: ComparePlayer) => p.rx?.toFixed(2) ?? "--", colorClass: "text-red-400" },
                   { label: "SCN+", getter: (p: ComparePlayer) => p.scn?.toString() ?? "--", colorClass: "text-cyan-400" },
                   { label: "Confianca", getter: (p: ComparePlayer) => p.confidence ? `${p.confidence}%` : "--", colorClass: "text-amber-400" },
-                ].map((metric) => (
-                  <tr key={metric.label} className="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                ].map((metric, mIdx) => (
+                  <tr
+                    key={metric.label}
+                    className={`border-b border-zinc-800/30 hover:bg-emerald-500/[0.03] transition-colors ${
+                      mIdx % 2 === 1 ? "bg-zinc-800/[0.1]" : ""
+                    }`}
+                  >
                     <td className="py-2.5 px-3 text-xs text-zinc-500">{metric.label}</td>
                     {players.map((p) => (
                       <td
@@ -244,11 +264,12 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
       </Card>
 
       {/* Neural Radar Charts */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
+      <Card className="bg-zinc-900/80 border-zinc-800/80 animate-slide-up stagger-3 overflow-hidden relative">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
             <Shield className="w-4 h-4 text-emerald-400" />
-            Camadas Neurais — 7 Dimensoes
+            Camadas Neurais --- 7 Dimensoes
           </CardTitle>
           <p className="text-xs text-zinc-600">
             Perfil completo de cada jogador nas 7 camadas do sistema Cortex
@@ -257,7 +278,11 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
         <CardContent>
           <div className={`grid ${gridCols} gap-6`}>
             {players.map((player, idx) => (
-              <div key={player.id} className="flex flex-col items-center">
+              <div
+                key={player.id}
+                className="flex flex-col items-center p-4 rounded-xl border border-zinc-800/50 bg-zinc-800/[0.05] hover:border-zinc-700 transition-all"
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
                 {player.layers && (
                   <NeuralRadar
                     layers={player.layers}
@@ -280,12 +305,12 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
             <div className="mt-6 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="text-left py-2 px-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                  <tr className="border-b border-zinc-800 bg-zinc-900/50">
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                       Camada
                     </th>
                     {players.map((p, idx) => (
-                      <th key={p.id} className="text-center py-2 px-3 text-xs font-medium" style={{ color: radarColors[idx] }}>
+                      <th key={p.id} className="text-center py-2.5 px-3 text-xs font-semibold" style={{ color: radarColors[idx] }}>
                         {p.name.split(" ").pop()}
                       </th>
                     ))}
@@ -300,17 +325,22 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
                     ["C5_narrative", "C5 Narrativa"],
                     ["C6_economic", "C6 Economico"],
                     ["C7_ai", "C7 IA"],
-                  ] as [keyof NeuralLayers, string][]).map(([key, label]) => {
+                  ] as [keyof NeuralLayers, string][]).map(([key, label], rowIdx) => {
                     const values = players.map((p) => p.layers?.[key] ?? 0)
                     const maxVal = Math.max(...values)
                     return (
-                      <tr key={key} className="border-b border-zinc-800/50">
-                        <td className="py-2 px-3 text-xs text-zinc-500">{label}</td>
+                      <tr
+                        key={key}
+                        className={`border-b border-zinc-800/30 transition-colors hover:bg-emerald-500/[0.03] ${
+                          rowIdx % 2 === 1 ? "bg-zinc-800/[0.1]" : ""
+                        }`}
+                      >
+                        <td className="py-2.5 px-3 text-xs text-zinc-500 font-medium">{label}</td>
                         {players.map((p, idx) => {
                           const val = p.layers?.[key] ?? 0
                           const isMax = val === maxVal && values.filter((v) => v === maxVal).length === 1
                           return (
-                            <td key={p.id} className="py-2 px-3 text-center">
+                            <td key={p.id} className="py-2.5 px-3 text-center">
                               <span
                                 className={`font-mono text-xs font-semibold ${
                                   isMax ? "text-emerald-400" : "text-zinc-400"
@@ -318,13 +348,12 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
                               >
                                 {val}
                               </span>
-                              <div className="w-full h-1.5 bg-zinc-800 rounded-full mt-1">
+                              <div className="w-full h-2 bg-zinc-800/80 rounded-full mt-1.5 overflow-hidden">
                                 <div
-                                  className="h-full rounded-full transition-all duration-500"
+                                  className="h-full rounded-full transition-all duration-700 ease-out"
                                   style={{
                                     width: `${val}%`,
-                                    backgroundColor: radarColors[idx],
-                                    opacity: 0.7,
+                                    background: `linear-gradient(90deg, ${radarColors[idx]}90, ${radarColors[idx]}50)`,
                                   }}
                                 />
                               </div>
@@ -342,7 +371,8 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
       </Card>
 
       {/* Algorithm Bars */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
+      <Card className="bg-zinc-900/80 border-zinc-800/80 animate-slide-up stagger-4 overflow-hidden relative">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold text-zinc-300">
             Algoritmos Proprietarios
@@ -353,11 +383,20 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
         </CardHeader>
         <CardContent>
           <div className={`grid ${gridCols} gap-6`}>
-            {players.map((player) => (
-              <div key={player.id}>
-                <p className="text-sm font-semibold text-zinc-200 mb-3 text-center">
-                  {player.name}
-                </p>
+            {players.map((player, idx) => (
+              <div
+                key={player.id}
+                className="p-4 rounded-xl border border-zinc-800/50 bg-zinc-800/[0.05]"
+              >
+                <div className="flex items-center gap-2 mb-3 justify-center">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: radarColors[idx] }}
+                  />
+                  <p className="text-sm font-semibold text-zinc-200">
+                    {player.name}
+                  </p>
+                </div>
                 {player.algorithms ? (
                   <AlgorithmBars scores={player.algorithms} />
                 ) : (
@@ -371,9 +410,10 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
         </CardContent>
       </Card>
 
-      {/* VxRx Scatter — Position in Decision Space */}
+      {/* VxRx Scatter --- Position in Decision Space */}
       {scatterData.length > 0 && (
-        <Card className="bg-zinc-900/80 border-zinc-800">
+        <Card className="bg-zinc-900/80 border-zinc-800/80 animate-slide-up stagger-5 overflow-hidden relative">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-zinc-300">
               Posicao no Espaco Decisorio VxRx
@@ -396,10 +436,11 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
       )}
 
       {/* Reasoning / AI Insights */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
+      <Card className="bg-zinc-900/80 border-zinc-800/80 animate-slide-up overflow-hidden relative">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold text-zinc-300">
-            Parecer Neural — Reasoning
+            Parecer Neural --- Reasoning
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -407,12 +448,15 @@ function CompareContent({ players }: { players: ComparePlayer[] }) {
             {players.map((player, idx) => (
               <div
                 key={player.id}
-                className="rounded-lg border border-zinc-800 bg-zinc-800/30 p-4"
+                className="rounded-xl border border-zinc-800/50 bg-zinc-800/20 p-4 hover:border-zinc-700 transition-all"
               >
                 <div className="flex items-center gap-2 mb-3">
                   <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: radarColors[idx] }}
+                    className="w-2.5 h-2.5 rounded-full shadow-sm"
+                    style={{
+                      backgroundColor: radarColors[idx],
+                      boxShadow: `0 0 8px ${radarColors[idx]}40`,
+                    }}
                   />
                   <p className="text-sm font-semibold text-zinc-200">{player.name}</p>
                 </div>

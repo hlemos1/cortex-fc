@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Bell,
   User,
+  Menu,
+  X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -39,98 +41,157 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
 
-  return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "flex flex-col border-r border-zinc-800/60 bg-[#0c0c0f] transition-all duration-300 ease-in-out",
-          collapsed ? "w-16" : "w-64"
-        )}
-      >
-        {/* Logo */}
-        <div className={cn(
-          "flex items-center h-16 border-b border-zinc-800/60 px-4",
-          collapsed ? "justify-center" : "gap-3"
-        )}>
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-            <Brain className="w-5 h-5 text-emerald-400" />
-          </div>
-          {!collapsed && (
-            <div>
-              <h1 className="text-sm font-bold text-zinc-100 tracking-tight">CORTEX FC</h1>
-              <p className="text-[10px] text-zinc-600 font-mono tracking-widest">NEURAL ANALYTICS</p>
-            </div>
-          )}
+  const sidebarContent = (
+    <>
+      {/* Subtle gradient overlay at top */}
+      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-emerald-500/[0.03] to-transparent pointer-events-none" />
+
+      {/* Logo */}
+      <div className={cn(
+        "relative flex items-center h-16 border-b border-zinc-800/60 px-4",
+        collapsed && !mobileOpen ? "justify-center" : "gap-3"
+      )}>
+        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0 animate-pulse-glow">
+          <Brain className="w-5 h-5 text-emerald-400" />
         </div>
+        {(!collapsed || mobileOpen) && (
+          <div>
+            <h1 className="text-sm font-bold text-zinc-100 tracking-tight">CORTEX FC</h1>
+            <p className="text-[10px] text-zinc-600 font-mono tracking-widest">NEURAL ANALYTICS</p>
+          </div>
+        )}
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 space-y-1">
-          {navItems.map((item) => {
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href)
-            const Icon = item.icon
+      {/* Navigation */}
+      <nav className="relative flex-1 py-4 px-2 space-y-1">
+        {navItems.map((item, index) => {
+          const isActive =
+            item.href === "/"
+              ? pathname === "/"
+              : pathname.startsWith(item.href)
+          const Icon = item.icon
 
-            const linkContent = (
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50",
-                  collapsed && "justify-center px-2"
-                )}
-              >
-                <Icon className={cn("w-4 h-4 flex-shrink-0", isActive && "text-emerald-400")} />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            )
+          // Add separator before Settings
+          const showSeparator = item.href === "/settings"
 
-            if (collapsed) {
-              return (
-                <Tooltip key={item.href}>
+          const linkContent = (
+            <Link
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                isActive
+                  ? "bg-emerald-500/10 text-emerald-400"
+                  : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50",
+                (collapsed && !mobileOpen) && "justify-center px-2"
+              )}
+            >
+              {/* Active left border indicator */}
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-emerald-400" />
+              )}
+              <Icon className={cn("w-4 h-4 flex-shrink-0", isActive && "text-emerald-400")} />
+              {(!collapsed || mobileOpen) && <span>{item.label}</span>}
+            </Link>
+          )
+
+          return (
+            <div key={item.href}>
+              {showSeparator && (
+                <div className="mx-3 my-3 border-t border-zinc-800/60" />
+              )}
+              {collapsed && !mobileOpen ? (
+                <Tooltip>
                   <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                   <TooltipContent side="right" className="bg-zinc-800 text-zinc-200 border-zinc-700">
                     {item.label}
                   </TooltipContent>
                 </Tooltip>
-              )
-            }
+              ) : (
+                linkContent
+              )}
+            </div>
+          )
+        })}
+      </nav>
 
-            return <div key={item.href}>{linkContent}</div>
-          })}
-        </nav>
+      {/* Collapse toggle — desktop only */}
+      <div className="relative hidden md:block border-t border-zinc-800/60 p-2"
+        style={{ borderImage: "linear-gradient(90deg, transparent, rgba(16,185,129,0.15), transparent) 1" }}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setCollapsed(!collapsed)}
+          className="w-full text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-all duration-200"
+        >
+          <ChevronLeft className={cn(
+            "w-4 h-4 transition-transform duration-300",
+            collapsed && "rotate-180"
+          )} />
+          {!collapsed && <span className="ml-2 text-xs">Recolher</span>}
+        </Button>
+      </div>
+    </>
+  )
 
-        {/* Collapse toggle */}
-        <div className="border-t border-zinc-800/60 p-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCollapsed(!collapsed)}
-            className="w-full text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
-          >
-            {collapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <>
-                <ChevronLeft className="w-4 h-4" />
-                <span className="ml-2 text-xs">Recolher</span>
-              </>
-            )}
-          </Button>
-        </div>
+  return (
+    <div className="flex h-screen overflow-hidden bg-zinc-950">
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden animate-fade-in"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — desktop */}
+      <aside
+        className={cn(
+          "relative hidden md:flex flex-col border-r border-zinc-800/60 bg-[#0c0c0f] transition-all duration-300 ease-in-out",
+          collapsed ? "w-16" : "w-64"
+        )}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Sidebar — mobile drawer */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex flex-col w-64 border-r border-zinc-800/60 bg-[#0c0c0f] transition-transform duration-300 ease-in-out md:hidden",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Close button */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="absolute top-4 right-3 p-1 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors z-10"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        {sidebarContent}
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar */}
-        <header className="h-16 border-b border-zinc-800/60 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between px-6">
-          <div className="flex items-center gap-2">
+        {/* Top Bar — glassmorphism */}
+        <header className="relative h-16 border-b border-zinc-800/60 glass-strong flex items-center justify-between px-6">
+          {/* Subtle bottom border gradient */}
+          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
+
+          <div className="flex items-center gap-3">
+            {/* Mobile hamburger */}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="md:hidden text-zinc-500 hover:text-zinc-300"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
             <span className="text-xs text-zinc-600 font-mono">v2.1.0</span>
             <span className="text-zinc-800">|</span>
             <span className="text-xs text-zinc-500">Nottingham Forest FC</span>
@@ -152,9 +213,11 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* Page Content — with fade-in animation */}
         <main className="flex-1 overflow-y-auto p-6">
-          {children}
+          <div className="animate-fade-in">
+            {children}
+          </div>
         </main>
       </div>
     </div>

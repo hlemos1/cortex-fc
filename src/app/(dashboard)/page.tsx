@@ -3,6 +3,7 @@ import {
   Activity,
   Search,
   TrendingUp,
+  Cpu,
 } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -69,6 +70,13 @@ export default async function DashboardPage() {
     })
   }
 
+  const borderColors = [
+    "border-l-blue-500",
+    "border-l-emerald-500",
+    "border-l-amber-500",
+    "border-l-cyan-500",
+  ]
+
   const statsCards = [
     {
       title: "Total Jogadores",
@@ -109,9 +117,9 @@ export default async function DashboardPage() {
   const recentAnalyses = analyses.slice(0, 8)
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-slide-down">
         <div>
           <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">
             Command Center
@@ -121,7 +129,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <Link href="/analysis/new">
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 transition-all duration-200 hover:shadow-emerald-900/40 hover:-translate-y-0.5">
             <Activity className="w-4 h-4 mr-2" />
             Nova Analise
           </Button>
@@ -130,22 +138,25 @@ export default async function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsCards.map((stat) => {
+        {statsCards.map((stat, index) => {
           const Icon = stat.icon
           return (
-            <Card key={stat.title} className="bg-zinc-900/80 border-zinc-800">
+            <Card
+              key={stat.title}
+              className={`bg-zinc-900/80 border-zinc-800 border-l-[3px] ${borderColors[index]} card-hover animate-slide-up stagger-${index + 1}`}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
                       {stat.title}
                     </p>
-                    <p className="text-2xl font-bold text-zinc-100 mt-1 font-mono">
+                    <p className="text-2xl font-bold text-zinc-100 mt-1 font-mono tracking-tight">
                       {stat.value}
                     </p>
                     <p className="text-[11px] text-zinc-600 mt-1">{stat.change}</p>
                   </div>
-                  <div className={`w-10 h-10 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
+                  <div className={`w-10 h-10 rounded-lg ${stat.bgColor} flex items-center justify-center ring-1 ring-white/5`}>
                     <Icon className={`w-5 h-5 ${stat.color}`} />
                   </div>
                 </div>
@@ -156,16 +167,23 @@ export default async function DashboardPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up stagger-3">
         {/* VxRx Scatter Plot */}
-        <Card className="lg:col-span-2 bg-zinc-900/80 border-zinc-800">
+        <Card className="lg:col-span-2 bg-zinc-900/80 border-zinc-800 card-hover">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-zinc-300">
-              Mapa VxRx — Valor vs Risco
-            </CardTitle>
-            <p className="text-xs text-zinc-600">
-              Todas as analises plotadas no espaco decisorio neural
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
+                <Cpu className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold text-zinc-300">
+                  Mapa VxRx — Valor vs Risco
+                </CardTitle>
+                <p className="text-xs text-zinc-600">
+                  Todas as analises plotadas no espaco decisorio neural
+                </p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <VxRxScatter data={scatterData} height={380} />
@@ -184,12 +202,17 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent Analyses Table */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
+      <Card className="bg-zinc-900/80 border-zinc-800 animate-slide-up stagger-4">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-zinc-300">
-              Ultimas Analises
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center ring-1 ring-cyan-500/20">
+                <Activity className="w-4 h-4 text-cyan-400" />
+              </div>
+              <CardTitle className="text-sm font-semibold text-zinc-300">
+                Ultimas Analises
+              </CardTitle>
+            </div>
             <Link href="/analysis">
               <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-zinc-300 text-xs">
                 Ver todas
@@ -226,16 +249,25 @@ export default async function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentAnalyses.map((analysis) => {
+                {recentAnalyses.map((analysis, index) => {
                   const algScores = toAlgorithmScores(analysis)
+                  const decisionColor =
+                    analysis.decision === "CONTRATAR" || analysis.decision === "BLINDAR"
+                      ? "border-l-emerald-500"
+                      : analysis.decision === "RECUSAR"
+                        ? "border-l-red-500"
+                        : analysis.decision === "ALERTA_CINZA"
+                          ? "border-l-zinc-500"
+                          : "border-l-amber-500"
                   return (
                     <tr
                       key={analysis.id}
-                      className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
+                      className={`border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-all duration-200 border-l-2 border-l-transparent hover:${decisionColor} animate-slide-up`}
+                      style={{ animationDelay: `${(index + 1) * 60}ms` }}
                     >
                       <td className="py-3 px-3">
                         <Link href={`/players/${analysis.player?.id}`} className="flex items-center gap-2 group">
-                          <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-500 flex-shrink-0">
+                          <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-500 flex-shrink-0 ring-1 ring-zinc-700 group-hover:ring-emerald-500/30 transition-all">
                             {(analysis.player?.name ?? "??").split(" ").map(n => n[0]).slice(0, 2).join("")}
                           </div>
                           <span className="text-zinc-200 font-medium group-hover:text-emerald-400 transition-colors">
@@ -262,7 +294,18 @@ export default async function DashboardPage() {
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <DecisionBadge decision={analysis.decision} size="sm" />
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            analysis.decision === "CONTRATAR" || analysis.decision === "BLINDAR"
+                              ? "bg-emerald-400"
+                              : analysis.decision === "RECUSAR"
+                                ? "bg-red-400"
+                                : analysis.decision === "ALERTA_CINZA"
+                                  ? "bg-zinc-400"
+                                  : "bg-amber-400"
+                          }`} />
+                          <DecisionBadge decision={analysis.decision} size="sm" />
+                        </div>
                       </td>
                       <td className="py-3 px-3 text-right text-zinc-600 text-xs">
                         {formatDate(analysis.createdAt)}

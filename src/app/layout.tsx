@@ -25,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased subpixel-antialiased`}>
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
       </body>
     </html>

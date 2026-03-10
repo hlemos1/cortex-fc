@@ -73,6 +73,8 @@ export function ReportsClient({ analyses }: Props) {
       subtitle: "Pareceres gerados",
       color: "text-emerald-400",
       bgColor: "bg-emerald-500/10",
+      borderColor: "border-emerald-500/20",
+      glowColor: "shadow-emerald-500/5",
     },
     {
       title: "Este Mes",
@@ -81,6 +83,8 @@ export function ReportsClient({ analyses }: Props) {
       subtitle: "Relatorios recentes",
       color: "text-blue-400",
       bgColor: "bg-blue-500/10",
+      borderColor: "border-blue-500/20",
+      glowColor: "shadow-blue-500/5",
     },
     {
       title: "Confianca Media",
@@ -89,13 +93,15 @@ export function ReportsClient({ analyses }: Props) {
       subtitle: "Score de confianca ORACLE",
       color: "text-cyan-400",
       bgColor: "bg-cyan-500/10",
+      borderColor: "border-cyan-500/20",
+      glowColor: "shadow-cyan-500/5",
     },
   ]
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
+      <div className="animate-slide-down">
         <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">
           Relatorios
         </h1>
@@ -106,10 +112,16 @@ export function ReportsClient({ analyses }: Props) {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {statsCards.map((stat) => {
+        {statsCards.map((stat, idx) => {
           const Icon = stat.icon
           return (
-            <Card key={stat.title} className="bg-zinc-900/80 border-zinc-800">
+            <Card
+              key={stat.title}
+              className={`bg-zinc-900/80 border-zinc-800/80 card-hover animate-slide-up overflow-hidden relative ${
+                idx === 0 ? "stagger-1" : idx === 1 ? "stagger-2" : "stagger-3"
+              }`}
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -121,7 +133,7 @@ export function ReportsClient({ analyses }: Props) {
                     </p>
                     <p className="text-[11px] text-zinc-600 mt-1">{stat.subtitle}</p>
                   </div>
-                  <div className={`w-10 h-10 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
+                  <div className={`w-11 h-11 rounded-xl ${stat.bgColor} border ${stat.borderColor} flex items-center justify-center shadow-lg ${stat.glowColor}`}>
                     <Icon className={`w-5 h-5 ${stat.color}`} />
                   </div>
                 </div>
@@ -131,69 +143,74 @@ export function ReportsClient({ analyses }: Props) {
         })}
       </div>
 
-      {/* Filters */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Filter className="w-4 h-4 text-zinc-500" />
-            <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
-              Filtros
-            </span>
+      {/* Filters - Glassmorphism */}
+      <div className="glass rounded-xl p-4 animate-slide-up stagger-2">
+        <div className="flex items-center gap-2 mb-3">
+          <Filter className="w-4 h-4 text-emerald-500/70" />
+          <span className="text-xs text-zinc-400 font-semibold uppercase tracking-widest">
+            Filtros
+          </span>
+        </div>
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Decision filter */}
+          <div className="flex flex-wrap gap-2">
+            {decisionFilters.map((df) => {
+              const isActive = decisionFilter === df.value
+              return (
+                <button
+                  key={df.value}
+                  onClick={() => setDecisionFilter(df.value)}
+                  className={`px-3 py-1.5 text-xs rounded-lg border transition-all duration-200 font-medium ${
+                    isActive
+                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-sm shadow-emerald-500/10"
+                      : "bg-zinc-800/40 border-zinc-700/40 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800/60"
+                  }`}
+                >
+                  {isActive && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse" />}
+                  {df.label}
+                </button>
+              )
+            })}
           </div>
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Decision filter */}
-            <div className="flex flex-wrap gap-2">
-              {decisionFilters.map((df) => {
-                const isActive = decisionFilter === df.value
-                return (
-                  <button
-                    key={df.value}
-                    onClick={() => setDecisionFilter(df.value)}
-                    className={`px-3 py-1.5 text-xs rounded-lg border transition-colors font-medium ${
-                      isActive
-                        ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
-                        : "bg-zinc-800/50 border-zinc-700/50 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600"
-                    }`}
-                  >
-                    {df.label}
-                  </button>
-                )
-              })}
-            </div>
 
-            {/* Date range */}
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-xs text-zinc-600">De:</span>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-36 h-8 bg-zinc-800/50 border-zinc-700/50 text-zinc-300 text-xs"
-              />
-              <span className="text-xs text-zinc-600">Ate:</span>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-36 h-8 bg-zinc-800/50 border-zinc-700/50 text-zinc-300 text-xs"
-              />
-            </div>
+          {/* Date range */}
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-xs text-zinc-600">De:</span>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-36 h-8 bg-zinc-800/40 border-zinc-700/40 text-zinc-300 text-xs rounded-lg focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20"
+            />
+            <span className="text-xs text-zinc-600">Ate:</span>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-36 h-8 bg-zinc-800/40 border-zinc-700/40 text-zinc-300 text-xs rounded-lg focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20"
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Report Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredReports.map((analysis) => {
+        {filteredReports.map((analysis, idx) => {
           return (
             <Card
               key={analysis.id}
-              className="bg-zinc-900/80 border-zinc-800 hover:border-zinc-700 transition-colors"
+              className="bg-zinc-900/80 border-zinc-800/80 card-hover animate-slide-up overflow-hidden relative group"
+              style={{ animationDelay: `${(idx % 6) * 80}ms` }}
             >
+              {/* Top gradient line */}
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zinc-700/50 to-transparent group-hover:via-emerald-500/30 transition-all duration-500" />
+              {/* Hover border glow */}
+              <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none border border-emerald-500/10" />
+
               <CardContent className="p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500 flex-shrink-0 border border-zinc-700">
+                    <div className="w-10 h-10 rounded-lg bg-zinc-800/80 flex items-center justify-center text-xs font-bold text-zinc-400 flex-shrink-0 border border-zinc-700/50 group-hover:border-emerald-500/20 transition-colors">
                       {(analysis.player?.name ?? "?")
                         .split(" ")
                         .map((n) => n[0])
@@ -202,10 +219,10 @@ export function ReportsClient({ analyses }: Props) {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-zinc-100">
-                        {analysis.player?.name ?? "—"}
+                        {analysis.player?.name ?? "---"}
                       </p>
                       <p className="text-xs text-zinc-500">
-                        {analysis.player?.position} — {analysis.player?.club}
+                        {analysis.player?.position} --- {analysis.player?.club}
                       </p>
                     </div>
                   </div>
@@ -216,21 +233,23 @@ export function ReportsClient({ analyses }: Props) {
                   {analysis.reasoning}
                 </p>
 
-                <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center gap-3 mb-4 p-2.5 rounded-lg bg-zinc-800/30 border border-zinc-800/50">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-zinc-600 uppercase">Vx</span>
+                    <span className="text-[10px] text-zinc-600 uppercase font-medium">Vx</span>
                     <span className="text-xs font-mono text-emerald-400 font-semibold">
                       {analysis.vx.toFixed(2)}
                     </span>
                   </div>
+                  <div className="w-px h-3 bg-zinc-700/50" />
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-zinc-600 uppercase">Rx</span>
+                    <span className="text-[10px] text-zinc-600 uppercase font-medium">Rx</span>
                     <span className="text-xs font-mono text-red-400 font-semibold">
                       {analysis.rx.toFixed(2)}
                     </span>
                   </div>
+                  <div className="w-px h-3 bg-zinc-700/50" />
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-zinc-600 uppercase">SCN+</span>
+                    <span className="text-[10px] text-zinc-600 uppercase font-medium">SCN+</span>
                     <span className="text-xs font-mono text-cyan-400 font-semibold">
                       {analysis.algorithms.SCN_plus}
                     </span>
@@ -249,7 +268,7 @@ export function ReportsClient({ analyses }: Props) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 text-xs h-8 gap-1.5"
+                      className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 text-xs h-8 gap-1.5 transition-all"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       Ver Relatorio
@@ -263,9 +282,11 @@ export function ReportsClient({ analyses }: Props) {
       </div>
 
       {filteredReports.length === 0 && (
-        <Card className="bg-zinc-900/80 border-zinc-800">
+        <Card className="bg-zinc-900/80 border-zinc-800 animate-fade-in">
           <CardContent className="py-12 text-center">
-            <FileText className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+            <div className="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-zinc-700" />
+            </div>
             <p className="text-zinc-500">Nenhum relatorio encontrado com os filtros selecionados.</p>
           </CardContent>
         </Card>

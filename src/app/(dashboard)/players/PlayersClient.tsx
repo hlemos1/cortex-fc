@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Search, ArrowUpDown, User, Filter } from "lucide-react"
+import { Search, ArrowUpDown, User, Filter, Users, X } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -93,21 +93,24 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
   }
 
   function SortHeader({ field, children }: { field: SortField; children: React.ReactNode }) {
+    const isActive = sortField === field
     return (
       <button
         onClick={() => toggleSort(field)}
-        className="flex items-center gap-1 text-xs font-medium text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
+        className={`flex items-center gap-1 text-xs font-medium uppercase tracking-wider transition-colors ${
+          isActive ? "text-emerald-400" : "text-zinc-500 hover:text-zinc-300"
+        }`}
       >
         {children}
-        <ArrowUpDown className={`w-3 h-3 ${sortField === field ? "text-emerald-400" : ""}`} />
+        <ArrowUpDown className={`w-3 h-3 transition-transform ${isActive ? "text-emerald-400 scale-110" : ""}`} />
       </button>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-slide-down">
         <div>
           <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Jogadores</h1>
           <p className="text-sm text-zinc-500 mt-1">
@@ -115,30 +118,34 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
           </p>
         </div>
         <Link href="/analysis/new">
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 transition-all duration-200 hover:shadow-emerald-900/40 hover:-translate-y-0.5">
             Nova Analise
           </Button>
         </Link>
       </div>
 
       {/* Filters */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
+      <Card className="bg-zinc-900/80 border-zinc-800 glass animate-slide-up stagger-1">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 transition-colors group-focus-within:text-emerald-400" />
               <Input
                 placeholder="Buscar jogador, clube ou posicao..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 bg-zinc-800/50 border-zinc-700 text-zinc-200 placeholder:text-zinc-600"
+                className="pl-9 bg-zinc-800/50 border-zinc-700 text-zinc-200 placeholder:text-zinc-600 transition-all focus:border-emerald-500/50 focus:bg-zinc-800/80 focus:shadow-[0_0_12px_rgba(16,185,129,0.08)]"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <select
                 value={positionFilter}
                 onChange={(e) => setPositionFilter(e.target.value)}
-                className="h-9 rounded-md border border-zinc-700 bg-zinc-800/50 px-3 text-sm text-zinc-300 outline-none focus:border-emerald-500"
+                className={`h-9 rounded-md border bg-zinc-800/50 px-3 text-sm outline-none transition-all ${
+                  positionFilter
+                    ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/5"
+                    : "border-zinc-700 text-zinc-300"
+                } focus:border-emerald-500`}
               >
                 <option value="">Todas Posicoes</option>
                 {positions.map((p) => (
@@ -148,7 +155,11 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
               <select
                 value={clubFilter}
                 onChange={(e) => setClubFilter(e.target.value)}
-                className="h-9 rounded-md border border-zinc-700 bg-zinc-800/50 px-3 text-sm text-zinc-300 outline-none focus:border-emerald-500"
+                className={`h-9 rounded-md border bg-zinc-800/50 px-3 text-sm outline-none transition-all ${
+                  clubFilter
+                    ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/5"
+                    : "border-zinc-700 text-zinc-300"
+                } focus:border-emerald-500`}
               >
                 <option value="">Todos Clubes</option>
                 {clubs.map((c) => (
@@ -160,9 +171,9 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
                   variant="ghost"
                   size="sm"
                   onClick={() => { setSearch(""); setPositionFilter(""); setClubFilter("") }}
-                  className="text-zinc-500 hover:text-zinc-300"
+                  className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
                 >
-                  <Filter className="w-3 h-3 mr-1" />
+                  <X className="w-3 h-3 mr-1" />
                   Limpar
                 </Button>
               )}
@@ -172,12 +183,12 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
       </Card>
 
       {/* Table */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
+      <Card className="bg-zinc-900/80 border-zinc-800 animate-slide-up stagger-2">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-zinc-800">
+                <tr className="border-b border-zinc-800 bg-zinc-900/50">
                   <th className="text-left py-3 px-4 w-8"></th>
                   <th className="text-left py-3 px-3">
                     <SortHeader field="name">Jogador</SortHeader>
@@ -205,13 +216,14 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((player) => (
+                {filtered.map((player, index) => (
                   <tr
                     key={player.id}
-                    className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
+                    className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-all duration-200 border-l-2 border-l-transparent hover:border-l-emerald-500 animate-slide-up"
+                    style={{ animationDelay: `${(index + 1) * 40}ms` }}
                   >
                     <td className="py-3 px-4">
-                      <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center ring-1 ring-zinc-700/50 transition-all group-hover:ring-emerald-500/30">
                         <User className="w-4 h-4 text-zinc-500" />
                       </div>
                     </td>
@@ -237,7 +249,7 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
                     </td>
                     <td className="py-3 px-3 text-center">
                       {player.scn !== undefined ? (
-                        <span className="font-mono text-cyan-400 text-xs font-semibold">
+                        <span className="font-mono text-cyan-400 text-xs font-semibold bg-cyan-500/10 px-1.5 py-0.5 rounded">
                           {player.scn}
                         </span>
                       ) : (
@@ -257,8 +269,14 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
             </table>
           </div>
           {filtered.length === 0 && (
-            <div className="py-12 text-center text-zinc-600 text-sm">
-              Nenhum jogador encontrado com os filtros atuais.
+            <div className="py-16 text-center animate-fade-in">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <Search className="w-8 h-8 text-zinc-700" />
+                <Users className="w-10 h-10 text-zinc-800" />
+                <Filter className="w-6 h-6 text-zinc-700" />
+              </div>
+              <p className="text-zinc-500 text-sm font-medium">Nenhum jogador encontrado</p>
+              <p className="text-zinc-700 text-xs mt-1">Tente ajustar os filtros de busca</p>
             </div>
           )}
         </CardContent>
