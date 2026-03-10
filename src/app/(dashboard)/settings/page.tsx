@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import {
   Settings,
   Building2,
@@ -402,9 +403,11 @@ export default function SettingsPage() {
               <p className="text-[11px] text-zinc-600 mb-3">
                 Gerencie multiplos clubes com painel unificado, benchmarking cruzado e analise de sinergia entre elencos.
               </p>
-              <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs shadow-lg shadow-emerald-900/20 hover:-translate-y-0.5 transition-all">
-                Upgrade para Multi-Club
-              </Button>
+              <Link href="/pricing" className="block w-full">
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs shadow-lg shadow-emerald-900/20 hover:-translate-y-0.5 transition-all">
+                  Upgrade para Multi-Club
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

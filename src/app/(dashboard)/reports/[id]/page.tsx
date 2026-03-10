@@ -1,7 +1,6 @@
 import Link from "next/link"
 import {
   ArrowLeft,
-  Download,
   User,
   MapPin,
   Calendar,
@@ -18,6 +17,7 @@ import { Separator } from "@/components/ui/separator"
 import { NeuralRadar } from "@/components/cortex/NeuralRadar"
 import { AlgorithmBars } from "@/components/cortex/AlgorithmBars"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
+import { PrintButton } from "@/components/cortex/PrintButton"
 import { getAnalysisById } from "@/db/queries"
 import { toAnalysisUI } from "@/lib/db-transforms"
 import type { AnalysisUI } from "@/lib/db-transforms"
@@ -109,8 +109,14 @@ export default async function ReportDetailPage({
 
   return (
     <div className="space-y-6">
+      {/* Print-only branding header */}
+      <div className="print-header hidden">
+        <h2 className="text-xl font-bold text-zinc-900">CORTEX FC</h2>
+        <p className="text-sm text-zinc-600 mt-1">Parecer ORACLE — Relatorio Neural</p>
+      </div>
+
       {/* Back button */}
-      <Link href="/reports">
+      <Link href="/reports" className="no-print">
         <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-zinc-300 -ml-2">
           <ArrowLeft className="w-4 h-4 mr-1" />
           Voltar
@@ -118,7 +124,7 @@ export default async function ReportDetailPage({
       </Link>
 
       {/* Report Header */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
+      <Card className="bg-zinc-900/80 border-zinc-800 no-break">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-6">
             {/* Photo placeholder */}
@@ -184,7 +190,7 @@ export default async function ReportDetailPage({
       </Card>
 
       {/* Reasoning / Full Parecer */}
-      <Card className="bg-zinc-900/80 border-zinc-800">
+      <Card className="bg-zinc-900/80 border-zinc-800 no-break">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
             <Brain className="w-4 h-4" />
@@ -211,9 +217,9 @@ export default async function ReportDetailPage({
       </Card>
 
       {/* VxRx Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 page-break-before">
         {/* VxRx Score Card */}
-        <Card className="bg-zinc-900/80 border-zinc-800">
+        <Card className="bg-zinc-900/80 border-zinc-800 no-break">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">VxRx Score</CardTitle>
           </CardHeader>
@@ -244,7 +250,7 @@ export default async function ReportDetailPage({
         </Card>
 
         {/* Vx Components */}
-        <Card className="bg-zinc-900/80 border-zinc-800">
+        <Card className="bg-zinc-900/80 border-zinc-800 no-break">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">Componentes Vx</CardTitle>
           </CardHeader>
@@ -284,7 +290,7 @@ export default async function ReportDetailPage({
         </Card>
 
         {/* Rx Components */}
-        <Card className="bg-zinc-900/80 border-zinc-800">
+        <Card className="bg-zinc-900/80 border-zinc-800 no-break">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">Componentes Rx</CardTitle>
           </CardHeader>
@@ -326,8 +332,8 @@ export default async function ReportDetailPage({
       </div>
 
       {/* Neural Radar + Algorithm Bars */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-zinc-900/80 border-zinc-800">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 page-break-before">
+        <Card className="bg-zinc-900/80 border-zinc-800 no-break">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">
               Radar Neural — 7 Camadas
@@ -343,7 +349,7 @@ export default async function ReportDetailPage({
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-900/80 border-zinc-800">
+        <Card className="bg-zinc-900/80 border-zinc-800 no-break">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400">
               Algoritmos Proprietarios
@@ -358,7 +364,7 @@ export default async function ReportDetailPage({
       {/* Risks + Recommended Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Risks */}
-        <Card className="bg-zinc-900/80 border-zinc-800">
+        <Card className="bg-zinc-900/80 border-zinc-800 no-break">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-red-400" />
@@ -381,7 +387,7 @@ export default async function ReportDetailPage({
         </Card>
 
         {/* Recommended Actions */}
-        <Card className="bg-zinc-900/80 border-zinc-800">
+        <Card className="bg-zinc-900/80 border-zinc-800 no-break">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -405,17 +411,14 @@ export default async function ReportDetailPage({
       </div>
 
       {/* Footer Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between no-print">
         <Link href="/reports">
           <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-zinc-300 text-xs">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Voltar aos relatorios
           </Button>
         </Link>
-        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
-          <Download className="w-4 h-4" />
-          Gerar PDF
-        </Button>
+        <PrintButton />
       </div>
     </div>
   )

@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/tooltip"
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Jogadores", icon: Users },
   { href: "/analysis", label: "Análises", icon: Activity },
   { href: "/scouting", label: "Scouting", icon: Search },
@@ -69,8 +69,8 @@ export default function DashboardLayout({
       <nav className="relative flex-1 py-4 px-2 space-y-1">
         {navItems.map((item, index) => {
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
               : pathname.startsWith(item.href)
           const Icon = item.icon
 

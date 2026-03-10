@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { VxRxScatter } from "@/components/cortex/VxRxScatter"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
+import { UpgradePrompt } from "@/components/cortex/UpgradePrompt"
 import type { AnalysisUI } from "@/lib/db-transforms"
 import type { CortexDecision } from "@/types/cortex"
 
@@ -98,6 +99,14 @@ export function AnalysisClient({ analyses }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Upgrade Banner */}
+      <UpgradePrompt
+        feature="Voce esta no plano gratuito. Upgrade para analises ilimitadas."
+        description="Desbloqueie analises neurais ilimitadas, filtros avancados e exportacao completa de dados."
+        requiredTier="club_professional"
+        variant="banner"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between animate-slide-down">
         <div>

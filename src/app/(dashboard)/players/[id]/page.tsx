@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator"
 import { NeuralRadar } from "@/components/cortex/NeuralRadar"
 import { AlgorithmBars } from "@/components/cortex/AlgorithmBars"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
+import { UpgradePrompt } from "@/components/cortex/UpgradePrompt"
 import { getPlayerById } from "@/db/queries"
 import {
   formatPlayerForUI,
@@ -416,19 +417,29 @@ export default async function PlayerDetailPage({
           )}
         </>
       ) : (
-        <Card className="bg-zinc-900/80 border-zinc-800 glass animate-scale-in">
-          <CardContent className="py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-              <Activity className="w-8 h-8 text-zinc-700" />
-            </div>
-            <p className="text-zinc-500">Nenhuma analise neural disponivel para este jogador.</p>
-            <Link href="/analysis/new">
-              <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20">
-                Executar ORACLE
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <>
+          <Card className="bg-zinc-900/80 border-zinc-800 glass animate-scale-in">
+            <CardContent className="py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                <Activity className="w-8 h-8 text-zinc-700" />
+              </div>
+              <p className="text-zinc-500">Nenhuma analise neural disponivel para este jogador.</p>
+              <Link href="/analysis/new">
+                <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20">
+                  Executar ORACLE
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Upgrade prompt for AI analysis */}
+          <UpgradePrompt
+            feature="Analise Neural com IA"
+            description="Desbloqueie analises avancadas com inteligencia artificial para avaliar jogadores com o motor ORACLE."
+            requiredTier="club_professional"
+            variant="inline"
+          />
+        </>
       )}
 
       {/* Action button */}

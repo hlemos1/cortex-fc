@@ -12,8 +12,8 @@ import { VxRxScatter } from "@/components/cortex/VxRxScatter"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { getDashboardStats, getAnalyses, getPlayers } from "@/db/queries"
 import { toScatterPoint, toAlgorithmScores, formatDate } from "@/lib/db-transforms"
-import { AlertsPanel } from "./AlertsPanel"
-import type { Alert } from "./AlertsPanel"
+import { AlertsPanel } from "../AlertsPanel"
+import type { Alert } from "../AlertsPanel"
 
 export default async function DashboardPage() {
   const [stats, analyses, allPlayers] = await Promise.all([

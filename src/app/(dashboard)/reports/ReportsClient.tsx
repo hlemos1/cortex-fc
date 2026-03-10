@@ -9,11 +9,13 @@ import {
   TrendingUp,
   Percent,
   Eye,
+  Download,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
+import { UpgradePrompt } from "@/components/cortex/UpgradePrompt"
 import { getDecisionColor } from "@/lib/db-transforms"
 import type { AnalysisUI } from "@/lib/db-transforms"
 import type { CortexDecision } from "@/types/cortex"
@@ -141,6 +143,26 @@ export function ReportsClient({ analyses }: Props) {
             </Card>
           )
         })}
+      </div>
+
+      {/* Export Buttons with Upgrade Overlay */}
+      <div className="relative rounded-xl overflow-hidden">
+        <div className="flex gap-3 p-4 bg-zinc-900/80 border border-zinc-800 rounded-xl blur-[2px] pointer-events-none select-none">
+          <Button variant="outline" className="bg-zinc-800/40 border-zinc-700/40 text-zinc-400 gap-2">
+            <Download className="w-4 h-4" />
+            Exportar CSV
+          </Button>
+          <Button variant="outline" className="bg-zinc-800/40 border-zinc-700/40 text-zinc-400 gap-2">
+            <Download className="w-4 h-4" />
+            Exportar PDF em Lote
+          </Button>
+        </div>
+        <UpgradePrompt
+          feature="Exportacao Avancada"
+          description="Exporte relatorios em lote nos formatos CSV e PDF com o plano Holding Multi-Club."
+          requiredTier="holding_multiclub"
+          variant="overlay"
+        />
       </div>
 
       {/* Filters - Glassmorphism */}
