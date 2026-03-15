@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAnalyses, createAnalysis } from "@/db/queries";
-
-// ============================================
-// VALIDATION HELPERS
-// ============================================
-
-function isValidUUID(str: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-}
+import { getAnalyses, createAnalysis, playerExists, clubExists } from "@/db/queries";
+import { requireAuth } from "@/lib/auth-helpers";
+import { hasPermission } from "@/lib/rbac";
+import { isValidUUID, isNumberInRange, stripHtmlTags } from "@/lib/validation";
 
 const VALID_DECISIONS = [
   "CONTRATAR",
@@ -18,21 +13,16 @@ const VALID_DECISIONS = [
   "ALERTA_CINZA",
 ] as const;
 
-function stripHtmlTags(str: string): string {
-  return str.replace(/<[^>]*>/g, "").trim();
-}
-
-function isNumberInRange(value: unknown, min: number, max: number): boolean {
-  return typeof value === "number" && !Number.isNaN(value) && value >= min && value <= max;
-}
-
-// ============================================
-// ROUTES
-// ============================================
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const analyses = await getAnalyses();
+    const { session, error } = await requireAuth();
+    if (error) return error;
+
+    const url = new URL(request.url);
+    const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50"), 100);
+    const offset = parseInt(url.searchParams.get("offset") ?? "0");
+
+    const analyses = await getAnalyses(session!.orgId, { limit, offset });
     return NextResponse.json({ data: analyses });
   } catch (error) {
     console.error("Failed to fetch analyses:", error);
@@ -45,26 +35,26 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { session, error } = await requireAuth();
+    if (error) return error;
+
+    // RBAC check
+    if (!hasPermission(session!.role, "create_analysis")) {
+      return NextResponse.json(
+        { error: "Sem permissao para criar analises" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
-    // Validate required fields are present
+    // Validate required fields
     const requiredFields = [
-      "playerId",
-      "clubContextId",
-      "vx",
-      "rx",
-      "vxComponents",
-      "rxComponents",
-      "c1Technical",
-      "c2Tactical",
-      "c3Physical",
-      "c4Behavioral",
-      "c5Narrative",
-      "c6Economic",
-      "c7Ai",
-      "decision",
-      "confidence",
-      "reasoning",
+      "playerId", "clubContextId", "vx", "rx",
+      "vxComponents", "rxComponents",
+      "c1Technical", "c2Tactical", "c3Physical",
+      "c4Behavioral", "c5Narrative", "c6Economic", "c7Ai",
+      "decision", "confidence", "reasoning",
     ];
 
     for (const field of requiredFields) {
@@ -76,59 +66,49 @@ export async function POST(request: Request) {
       }
     }
 
-    // Validate UUID fields
-    if (typeof body.playerId !== "string" || !isValidUUID(body.playerId)) {
-      return NextResponse.json(
-        { error: "playerId must be a valid UUID" },
-        { status: 400 }
-      );
+    // Validate UUIDs
+    if (!isValidUUID(body.playerId)) {
+      return NextResponse.json({ error: "playerId must be a valid UUID" }, { status: 400 });
     }
-    if (typeof body.clubContextId !== "string" || !isValidUUID(body.clubContextId)) {
-      return NextResponse.json(
-        { error: "clubContextId must be a valid UUID" },
-        { status: 400 }
-      );
+    if (!isValidUUID(body.clubContextId)) {
+      return NextResponse.json({ error: "clubContextId must be a valid UUID" }, { status: 400 });
     }
 
-    // Validate numeric ranges: vx and rx are 0-3 (per CORTEX methodology)
+    // Validate entities exist
+    const [playerOk, clubOk] = await Promise.all([
+      playerExists(body.playerId),
+      clubExists(body.clubContextId),
+    ]);
+    if (!playerOk) {
+      return NextResponse.json({ error: "Player not found" }, { status: 404 });
+    }
+    if (!clubOk) {
+      return NextResponse.json({ error: "Club not found" }, { status: 404 });
+    }
+
+    // Validate numeric ranges
     if (!isNumberInRange(body.vx, 0, 3)) {
-      return NextResponse.json(
-        { error: "vx must be a number between 0 and 3" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "vx must be between 0 and 3" }, { status: 400 });
     }
     if (!isNumberInRange(body.rx, 0, 3)) {
-      return NextResponse.json(
-        { error: "rx must be a number between 0 and 3" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "rx must be between 0 and 3" }, { status: 400 });
     }
 
-    // Validate cortex layer scores (c1-c7): 0-100
     const layerFields = [
-      "c1Technical",
-      "c2Tactical",
-      "c3Physical",
-      "c4Behavioral",
-      "c5Narrative",
-      "c6Economic",
-      "c7Ai",
+      "c1Technical", "c2Tactical", "c3Physical",
+      "c4Behavioral", "c5Narrative", "c6Economic", "c7Ai",
     ] as const;
     for (const field of layerFields) {
       if (!isNumberInRange(body[field], 0, 100)) {
         return NextResponse.json(
-          { error: `${field} must be a number between 0 and 100` },
+          { error: `${field} must be between 0 and 100` },
           { status: 400 }
         );
       }
     }
 
-    // Validate confidence: 0-100
     if (!isNumberInRange(body.confidence, 0, 100)) {
-      return NextResponse.json(
-        { error: "confidence must be a number between 0 and 100" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "confidence must be between 0 and 100" }, { status: 400 });
     }
 
     // Validate decision enum
@@ -139,28 +119,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate and sanitize reasoning
+    // Sanitize reasoning
     if (typeof body.reasoning !== "string") {
-      return NextResponse.json(
-        { error: "reasoning must be a string" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "reasoning must be a string" }, { status: 400 });
     }
     const sanitizedReasoning = stripHtmlTags(body.reasoning);
-    if (sanitizedReasoning.length === 0) {
+    if (sanitizedReasoning.length === 0 || sanitizedReasoning.length > 5000) {
       return NextResponse.json(
-        { error: "reasoning must be a non-empty string" },
-        { status: 400 }
-      );
-    }
-    if (sanitizedReasoning.length > 5000) {
-      return NextResponse.json(
-        { error: "reasoning must not exceed 5000 characters" },
+        { error: "reasoning must be 1-5000 characters" },
         { status: 400 }
       );
     }
 
-    // Build a sanitized payload with only the expected fields
     const sanitizedBody = {
       playerId: body.playerId,
       clubContextId: body.clubContextId,
@@ -178,9 +148,18 @@ export async function POST(request: Request) {
       decision: body.decision,
       confidence: body.confidence,
       reasoning: sanitizedReasoning,
-      ...(body.analystId && typeof body.analystId === "string" && isValidUUID(body.analystId)
-        ? { analystId: body.analystId }
-        : {}),
+      analystId: session!.userId,
+      // Optional algorithm scores
+      ...(isNumberInRange(body.ast, 0, 100) ? { ast: body.ast } : {}),
+      ...(isNumberInRange(body.clf, 0, 100) ? { clf: body.clf } : {}),
+      ...(isNumberInRange(body.gne, 0, 100) ? { gne: body.gne } : {}),
+      ...(isNumberInRange(body.wse, 0, 100) ? { wse: body.wse } : {}),
+      ...(isNumberInRange(body.rbl, 0, 100) ? { rbl: body.rbl } : {}),
+      ...(isNumberInRange(body.sace, 0, 100) ? { sace: body.sace } : {}),
+      ...(isNumberInRange(body.scnPlus, 0, 100) ? { scnPlus: body.scnPlus } : {}),
+      ...(Array.isArray(body.recommendedActions) ? { recommendedActions: body.recommendedActions } : {}),
+      ...(Array.isArray(body.risks) ? { risks: body.risks } : {}),
+      ...(Array.isArray(body.comparables) ? { comparables: body.comparables } : {}),
     };
 
     const analysis = await createAnalysis(sanitizedBody);

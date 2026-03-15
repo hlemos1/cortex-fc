@@ -14,6 +14,7 @@ import { getDashboardStats, getAnalyses, getPlayers } from "@/db/queries"
 import { toScatterPoint, toAlgorithmScores, formatDate } from "@/lib/db-transforms"
 import { AlertsPanel } from "../AlertsPanel"
 import type { Alert } from "../AlertsPanel"
+import { BoardAdvisorWidget } from "@/components/cortex/BoardAdvisorWidget"
 
 export default async function DashboardPage() {
   const [stats, analyses, allPlayers] = await Promise.all([
@@ -199,6 +200,11 @@ export default async function DashboardPage() {
 
         {/* Alerts Panel */}
         <AlertsPanel alerts={alerts} />
+      </div>
+
+      {/* Board Advisor Widget */}
+      <div className="animate-slide-up stagger-4">
+        <BoardAdvisorWidget />
       </div>
 
       {/* Recent Analyses Table */}

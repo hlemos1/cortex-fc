@@ -1,80 +1,126 @@
-import { NextResponse } from "next/server"
-import { db } from "@/db/index"
-import { users, organizations } from "@/db/schema"
-import { eq } from "drizzle-orm"
-import bcrypt from "bcryptjs"
+import { NextResponse } from "next/server";
+import { db } from "@/db/index";
+import { users, organizations } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { isValidEmail, isStrongPassword } from "@/lib/validation";
+import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    const { name, email, password, clubName } = body
-
-    // Validate
-    if (!name || !email || !password || !clubName) {
+    // Rate limit registration attempts
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
+    const { success: rateLimitOk } = await checkRateLimit(authRateLimit, `reg:${ip}`);
+    if (!rateLimitOk) {
       return NextResponse.json(
-        { error: "Todos os campos são obrigatórios" },
-        { status: 400 }
-      )
+        { error: "Muitas tentativas. Tente novamente em 1 minuto." },
+        { status: 429 }
+      );
     }
 
-    if (password.length < 6) {
+    const body = await req.json();
+    const { name, email, password, clubName } = body;
+
+    // Validate required fields
+    if (!name || !email || !password || !clubName) {
       return NextResponse.json(
-        { error: "Senha deve ter no mínimo 6 caracteres" },
+        { error: "Todos os campos sao obrigatorios" },
         { status: 400 }
-      )
+      );
+    }
+
+    // Validate name length
+    if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 100) {
+      return NextResponse.json(
+        { error: "Nome deve ter entre 2 e 100 caracteres" },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Formato de email invalido" },
+        { status: 400 }
+      );
+    }
+
+    // Validate password strength
+    const passwordCheck = isStrongPassword(password);
+    if (!passwordCheck.valid) {
+      return NextResponse.json(
+        { error: passwordCheck.message },
+        { status: 400 }
+      );
+    }
+
+    // Validate club name
+    if (typeof clubName !== "string" || clubName.trim().length < 2 || clubName.trim().length > 100) {
+      return NextResponse.json(
+        { error: "Nome do clube deve ter entre 2 e 100 caracteres" },
+        { status: 400 }
+      );
     }
 
     // Check existing user
     const existing = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    })
+      where: eq(users.email, email.toLowerCase().trim()),
+    });
     if (existing) {
       return NextResponse.json(
-        { error: "Email já cadastrado" },
+        { error: "Email ja cadastrado" },
         { status: 409 }
-      )
+      );
     }
 
     // Create org
     const slug =
       clubName
         .toLowerCase()
+        .trim()
         .replace(/\s+/g, "-")
         .replace(/[^a-z0-9-]/g, "") +
       "-" +
-      Date.now().toString(36)
+      Date.now().toString(36);
 
     const [org] = await db
       .insert(organizations)
       .values({
-        name: clubName,
+        name: clubName.trim(),
         slug,
         tier: "free",
       })
-      .returning()
+      .returning();
 
-    // Create user
-    const passwordHash = await bcrypt.hash(password, 10)
+    // Create user with stronger hash
+    const passwordHash = await bcrypt.hash(password, 12);
     const [user] = await db
       .insert(users)
       .values({
-        name,
-        email,
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
         passwordHash,
         orgId: org.id,
         role: "admin",
       })
-      .returning()
+      .returning();
+
+    // Send welcome email (don't fail registration if email fails)
+    sendWelcomeEmail(user.email, user.name).catch((err) => {
+      console.error("Failed to send welcome email:", err);
+    });
 
     return NextResponse.json({
       success: true,
       user: { id: user.id, name: user.name, email: user.email },
-    })
+    });
   } catch (error) {
-    console.error("Register error:", error)
+    console.error("Register error:", error);
     return NextResponse.json(
       { error: "Erro interno do servidor" },
       { status: 500 }
-    )
+    );
   }
 }

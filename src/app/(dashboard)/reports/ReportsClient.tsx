@@ -10,6 +10,8 @@ import {
   Percent,
   Eye,
   Download,
+  Share2,
+  Bot,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -38,6 +40,7 @@ export function ReportsClient({ analyses }: Props) {
   const [decisionFilter, setDecisionFilter] = useState<CortexDecision | "ALL">("ALL")
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
+  const [generating, setGenerating] = useState<string | null>(null)
 
   const filteredReports = useMemo(() => {
     return analyses.filter((a) => {
@@ -145,24 +148,64 @@ export function ReportsClient({ analyses }: Props) {
         })}
       </div>
 
-      {/* Export Buttons with Upgrade Overlay */}
-      <div className="relative rounded-xl overflow-hidden">
-        <div className="flex gap-3 p-4 bg-zinc-900/80 border border-zinc-800 rounded-xl blur-[2px] pointer-events-none select-none">
-          <Button variant="outline" className="bg-zinc-800/40 border-zinc-700/40 text-zinc-400 gap-2">
-            <Download className="w-4 h-4" />
-            Exportar CSV
-          </Button>
-          <Button variant="outline" className="bg-zinc-800/40 border-zinc-700/40 text-zinc-400 gap-2">
-            <Download className="w-4 h-4" />
-            Exportar PDF em Lote
-          </Button>
-        </div>
-        <UpgradePrompt
-          feature="Exportacao Avancada"
-          description="Exporte relatorios em lote nos formatos CSV e PDF com o plano Holding Multi-Club."
-          requiredTier="holding_multiclub"
-          variant="overlay"
-        />
+      {/* Generate Report Buttons */}
+      <div className="flex flex-wrap gap-3 animate-slide-up stagger-2">
+        <Button
+          variant="outline"
+          className="bg-zinc-800/40 border-zinc-700/40 text-zinc-300 hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 gap-2"
+          disabled={generating !== null}
+          onClick={async () => {
+            setGenerating("squad")
+            try {
+              const res = await fetch("/api/reports/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ template: "squad_analysis" }),
+              })
+              if (res.ok) {
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement("a")
+                a.href = url
+                a.download = "analise-elenco.pdf"
+                a.click()
+                URL.revokeObjectURL(url)
+              }
+            } catch {}
+            setGenerating(null)
+          }}
+        >
+          <Download className="w-4 h-4" />
+          {generating === "squad" ? "Gerando..." : "PDF — Analise de Elenco"}
+        </Button>
+        <Button
+          variant="outline"
+          className="bg-zinc-800/40 border-zinc-700/40 text-zinc-300 hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 gap-2"
+          disabled={generating !== null}
+          onClick={async () => {
+            setGenerating("newsletter")
+            try {
+              const res = await fetch("/api/reports/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ template: "weekly_newsletter" }),
+              })
+              if (res.ok) {
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement("a")
+                a.href = url
+                a.download = "newsletter-semanal.pdf"
+                a.click()
+                URL.revokeObjectURL(url)
+              }
+            } catch {}
+            setGenerating(null)
+          }}
+        >
+          <FileText className="w-4 h-4" />
+          {generating === "newsletter" ? "Gerando..." : "PDF — Newsletter Semanal"}
+        </Button>
       </div>
 
       {/* Filters - Glassmorphism */}

@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-matches",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/sync-stats",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-report",
+      "schedule": "0 9 * * 1"
+    }
+  ]
+}

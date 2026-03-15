@@ -34,7 +34,23 @@ function makeUuid(name: string): string {
 const ORG_ID = makeUuid("org:nottingham-forest");
 const USER_ID = makeUuid("user:analyst");
 const LEAGUE_ID = makeUuid("league:premier-league");
+const LEAGUE_IDS_TOP5 = {
+  "Premier League": makeUuid("league:premier-league"),
+  "La Liga": makeUuid("league:la-liga"),
+  "Serie A": makeUuid("league:serie-a"),
+  "Bundesliga": makeUuid("league:bundesliga"),
+  "Ligue 1": makeUuid("league:ligue-1"),
+};
 const SEASON_ID = makeUuid("season:2024-25");
+
+// API-Football external IDs for league mapping
+const LEAGUE_EXTERNAL_IDS: Record<string, string> = {
+  "Premier League": "39",
+  "La Liga": "140",
+  "Serie A": "135",
+  "Bundesliga": "78",
+  "Ligue 1": "61",
+};
 
 // ============================================
 // Position cluster type
@@ -214,8 +230,27 @@ interface AnalysisSeed {
   playerName: string;
   vx: number;
   rx: number;
-  vxComponents: { performance: number; potential: number; trajectory: number };
-  rxComponents: { financial: number; contractual: number; adaptability: number };
+  vxComponents: {
+    technical: number;       // T: qualidade em bola (0-10)
+    marketImpact: number;    // M: valor de marca/comercial (0-10)
+    culturalAdaptation: number; // A: adaptação BHAR (0-10)
+    networkingBenefit: number;  // N: rede de agentes, compatriotas (0-10)
+    ageDepreciation: number;    // D: depreciação por idade (0-10, higher = worse)
+    liabilities: number;        // L: salário + risco lesão (0-10, higher = worse)
+    regulatoryRisk: number;     // R: trabalho visado, FFP (0-10, higher = worse)
+    totalCost: number;          // C: custo total em milhões EUR (0-10 scale)
+  };
+  rxComponents: {
+    tacticalGap: number;     // Tg: lacuna tática que preenche (0-10)
+    contextualFit: number;   // Cx: encaixe no sistema/formação (0-10)
+    experienceProfile: number; // Ep: experiência em contextos similares (0-10)
+    narrativeIndex: number;  // Ni: narrativa mídia/vestiário (0-10)
+    mentalFortitude: number; // Mf: temperamento em grandes jogos (0-10)
+    injuryMicroRisk: number; // Mi: padrões de lesão crônica (0-10, higher = worse)
+    suspensionRisk: number;  // S: histórico disciplinar (0-10, higher = worse)
+    valueAtRisk: number;     // Va: exposição financeira (0-10, higher = worse)
+    marketJitter: number;    // Mj: volatilidade do mercado (0-10, higher = worse)
+  };
   c1Technical: number;
   c2Tactical: number;
   c3Physical: number;
@@ -243,8 +278,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Marc Guehi",
     vx: 82, rx: 74,
-    vxComponents: { performance: 80, potential: 85, trajectory: 81 },
-    rxComponents: { financial: 68, contractual: 78, adaptability: 76 },
+    vxComponents: { technical: 7.8, marketImpact: 6.5, culturalAdaptation: 8.5, networkingBenefit: 7.0, ageDepreciation: 2.0, liabilities: 4.5, regulatoryRisk: 1.5, totalCost: 5.0 },
+    rxComponents: { tacticalGap: 8.5, contextualFit: 8.0, experienceProfile: 7.0, narrativeIndex: 7.5, mentalFortitude: 8.5, injuryMicroRisk: 2.5, suspensionRisk: 1.0, valueAtRisk: 5.0, marketJitter: 4.0 },
     c1Technical: 78, c2Tactical: 84, c3Physical: 82, c4Behavioral: 88, c5Narrative: 72, c6Economic: 65, c7Ai: 80,
     ast: 79, clf: 82, gne: 85, wse: 77, rbl: 72, sace: 84, scnPlus: 79,
     decision: "CONTRATAR", confidence: 82,
@@ -256,8 +291,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Bryan Mbeumo",
     vx: 80, rx: 78,
-    vxComponents: { performance: 82, potential: 76, trajectory: 82 },
-    rxComponents: { financial: 75, contractual: 82, adaptability: 77 },
+    vxComponents: { technical: 8.3, marketImpact: 6.0, culturalAdaptation: 7.5, networkingBenefit: 5.5, ageDepreciation: 2.5, liabilities: 4.0, regulatoryRisk: 2.0, totalCost: 4.5 },
+    rxComponents: { tacticalGap: 8.0, contextualFit: 7.5, experienceProfile: 7.5, narrativeIndex: 7.0, mentalFortitude: 7.5, injuryMicroRisk: 2.0, suspensionRisk: 1.5, valueAtRisk: 4.5, marketJitter: 3.5 },
     c1Technical: 83, c2Tactical: 78, c3Physical: 77, c4Behavioral: 80, c5Narrative: 74, c6Economic: 78, c7Ai: 79,
     ast: 76, clf: 74, gne: 80, wse: 75, rbl: 78, sace: 73, scnPlus: 77,
     decision: "CONTRATAR", confidence: 78,
@@ -269,8 +304,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Antonee Robinson",
     vx: 76, rx: 80,
-    vxComponents: { performance: 75, potential: 72, trajectory: 81 },
-    rxComponents: { financial: 82, contractual: 78, adaptability: 80 },
+    vxComponents: { technical: 7.2, marketImpact: 5.0, culturalAdaptation: 7.8, networkingBenefit: 5.0, ageDepreciation: 3.0, liabilities: 3.5, regulatoryRisk: 2.5, totalCost: 3.5 },
+    rxComponents: { tacticalGap: 7.0, contextualFit: 7.5, experienceProfile: 7.0, narrativeIndex: 6.5, mentalFortitude: 7.5, injuryMicroRisk: 2.0, suspensionRisk: 1.0, valueAtRisk: 3.5, marketJitter: 3.0 },
     c1Technical: 72, c2Tactical: 78, c3Physical: 86, c4Behavioral: 80, c5Narrative: 70, c6Economic: 82, c7Ai: 75,
     ast: 80, clf: 78, gne: 82, wse: 76, rbl: 82, sace: 78, scnPlus: 78,
     decision: "CONTRATAR", confidence: 75,
@@ -282,8 +317,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Eberechi Eze",
     vx: 84, rx: 72,
-    vxComponents: { performance: 83, potential: 84, trajectory: 85 },
-    rxComponents: { financial: 62, contractual: 76, adaptability: 78 },
+    vxComponents: { technical: 8.8, marketImpact: 7.5, culturalAdaptation: 8.0, networkingBenefit: 6.0, ageDepreciation: 2.5, liabilities: 5.0, regulatoryRisk: 1.5, totalCost: 6.0 },
+    rxComponents: { tacticalGap: 8.0, contextualFit: 8.5, experienceProfile: 7.0, narrativeIndex: 8.0, mentalFortitude: 7.0, injuryMicroRisk: 3.0, suspensionRisk: 1.5, valueAtRisk: 6.0, marketJitter: 5.0 },
     c1Technical: 88, c2Tactical: 80, c3Physical: 78, c4Behavioral: 76, c5Narrative: 82, c6Economic: 60, c7Ai: 83,
     ast: 82, clf: 80, gne: 78, wse: 84, rbl: 68, sace: 80, scnPlus: 80,
     decision: "CONTRATAR", confidence: 80,
@@ -295,8 +330,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Matheus Cunha",
     vx: 81, rx: 73,
-    vxComponents: { performance: 82, potential: 78, trajectory: 83 },
-    rxComponents: { financial: 68, contractual: 74, adaptability: 77 },
+    vxComponents: { technical: 8.4, marketImpact: 6.5, culturalAdaptation: 9.0, networkingBenefit: 8.0, ageDepreciation: 2.5, liabilities: 5.0, regulatoryRisk: 2.0, totalCost: 5.5 },
+    rxComponents: { tacticalGap: 8.0, contextualFit: 7.5, experienceProfile: 7.5, narrativeIndex: 7.0, mentalFortitude: 7.0, injuryMicroRisk: 2.5, suspensionRisk: 4.0, valueAtRisk: 5.5, marketJitter: 4.0 },
     c1Technical: 84, c2Tactical: 79, c3Physical: 80, c4Behavioral: 72, c5Narrative: 76, c6Economic: 65, c7Ai: 80,
     ast: 78, clf: 84, gne: 76, wse: 80, rbl: 70, sace: 82, scnPlus: 78,
     decision: "CONTRATAR", confidence: 76,
@@ -308,8 +343,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Dominik Szoboszlai",
     vx: 79, rx: 70,
-    vxComponents: { performance: 77, potential: 82, trajectory: 78 },
-    rxComponents: { financial: 62, contractual: 70, adaptability: 78 },
+    vxComponents: { technical: 8.0, marketImpact: 6.5, culturalAdaptation: 7.0, networkingBenefit: 5.0, ageDepreciation: 2.0, liabilities: 6.5, regulatoryRisk: 2.0, totalCost: 7.0 },
+    rxComponents: { tacticalGap: 7.5, contextualFit: 7.0, experienceProfile: 7.0, narrativeIndex: 7.0, mentalFortitude: 7.5, injuryMicroRisk: 2.5, suspensionRisk: 1.5, valueAtRisk: 7.0, marketJitter: 5.0 },
     c1Technical: 80, c2Tactical: 76, c3Physical: 82, c4Behavioral: 78, c5Narrative: 72, c6Economic: 58, c7Ai: 78,
     ast: 74, clf: 76, gne: 72, wse: 78, rbl: 66, sace: 76, scnPlus: 74,
     decision: "CONTRATAR", confidence: 68,
@@ -323,8 +358,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Murillo",
     vx: 85, rx: 88,
-    vxComponents: { performance: 82, potential: 90, trajectory: 83 },
-    rxComponents: { financial: 90, contractual: 85, adaptability: 89 },
+    vxComponents: { technical: 8.0, marketImpact: 7.5, culturalAdaptation: 9.0, networkingBenefit: 8.5, ageDepreciation: 1.0, liabilities: 2.5, regulatoryRisk: 1.0, totalCost: 3.0 },
+    rxComponents: { tacticalGap: 9.0, contextualFit: 9.5, experienceProfile: 7.5, narrativeIndex: 8.0, mentalFortitude: 8.5, injuryMicroRisk: 1.5, suspensionRisk: 2.0, valueAtRisk: 3.0, marketJitter: 2.5 },
     c1Technical: 80, c2Tactical: 82, c3Physical: 88, c4Behavioral: 85, c5Narrative: 82, c6Economic: 90, c7Ai: 86,
     ast: 85, clf: 88, gne: 90, wse: 82, rbl: 88, sace: 90, scnPlus: 86,
     decision: "BLINDAR", confidence: 95,
@@ -336,8 +371,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Morgan Gibbs-White",
     vx: 80, rx: 85,
-    vxComponents: { performance: 79, potential: 78, trajectory: 83 },
-    rxComponents: { financial: 85, contractual: 84, adaptability: 86 },
+    vxComponents: { technical: 8.2, marketImpact: 7.0, culturalAdaptation: 9.5, networkingBenefit: 8.0, ageDepreciation: 2.5, liabilities: 4.0, regulatoryRisk: 1.0, totalCost: 4.0 },
+    rxComponents: { tacticalGap: 9.5, contextualFit: 9.0, experienceProfile: 8.0, narrativeIndex: 8.5, mentalFortitude: 8.0, injuryMicroRisk: 2.5, suspensionRisk: 2.0, valueAtRisk: 4.0, marketJitter: 3.0 },
     c1Technical: 82, c2Tactical: 80, c3Physical: 76, c4Behavioral: 78, c5Narrative: 84, c6Economic: 85, c7Ai: 81,
     ast: 84, clf: 88, gne: 88, wse: 85, rbl: 84, sace: 88, scnPlus: 84,
     decision: "BLINDAR", confidence: 90,
@@ -349,8 +384,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Nuno Tavares",
     vx: 78, rx: 84,
-    vxComponents: { performance: 76, potential: 80, trajectory: 78 },
-    rxComponents: { financial: 86, contractual: 82, adaptability: 84 },
+    vxComponents: { technical: 7.2, marketImpact: 6.0, culturalAdaptation: 8.5, networkingBenefit: 7.0, ageDepreciation: 2.0, liabilities: 2.5, regulatoryRisk: 1.5, totalCost: 3.0 },
+    rxComponents: { tacticalGap: 8.5, contextualFit: 9.0, experienceProfile: 7.0, narrativeIndex: 7.5, mentalFortitude: 7.0, injuryMicroRisk: 3.0, suspensionRisk: 1.5, valueAtRisk: 3.0, marketJitter: 3.0 },
     c1Technical: 72, c2Tactical: 74, c3Physical: 88, c4Behavioral: 74, c5Narrative: 78, c6Economic: 86, c7Ai: 77,
     ast: 80, clf: 82, gne: 84, wse: 78, rbl: 84, sace: 80, scnPlus: 80,
     decision: "BLINDAR", confidence: 85,
@@ -362,8 +397,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Chris Wood",
     vx: 72, rx: 86,
-    vxComponents: { performance: 74, potential: 60, trajectory: 82 },
-    rxComponents: { financial: 92, contractual: 80, adaptability: 86 },
+    vxComponents: { technical: 6.8, marketImpact: 5.5, culturalAdaptation: 9.0, networkingBenefit: 6.0, ageDepreciation: 7.0, liabilities: 3.0, regulatoryRisk: 1.0, totalCost: 2.0 },
+    rxComponents: { tacticalGap: 9.0, contextualFit: 9.5, experienceProfile: 9.0, narrativeIndex: 8.5, mentalFortitude: 9.0, injuryMicroRisk: 4.0, suspensionRisk: 1.0, valueAtRisk: 2.0, marketJitter: 1.5 },
     c1Technical: 68, c2Tactical: 74, c3Physical: 72, c4Behavioral: 90, c5Narrative: 88, c6Economic: 92, c7Ai: 76,
     ast: 78, clf: 90, gne: 78, wse: 82, rbl: 90, sace: 88, scnPlus: 82,
     decision: "BLINDAR", confidence: 88,
@@ -375,8 +410,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Callum Hudson-Odoi",
     vx: 76, rx: 82,
-    vxComponents: { performance: 75, potential: 76, trajectory: 77 },
-    rxComponents: { financial: 84, contractual: 80, adaptability: 82 },
+    vxComponents: { technical: 8.0, marketImpact: 5.5, culturalAdaptation: 9.0, networkingBenefit: 7.0, ageDepreciation: 2.0, liabilities: 3.5, regulatoryRisk: 1.0, totalCost: 3.0 },
+    rxComponents: { tacticalGap: 8.0, contextualFit: 9.0, experienceProfile: 7.5, narrativeIndex: 7.5, mentalFortitude: 7.0, injuryMicroRisk: 4.5, suspensionRisk: 1.0, valueAtRisk: 3.0, marketJitter: 2.5 },
     c1Technical: 80, c2Tactical: 74, c3Physical: 76, c4Behavioral: 76, c5Narrative: 78, c6Economic: 84, c7Ai: 77,
     ast: 76, clf: 82, gne: 80, wse: 78, rbl: 82, sace: 80, scnPlus: 78,
     decision: "BLINDAR", confidence: 82,
@@ -390,8 +425,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Cole Palmer",
     vx: 92, rx: 45,
-    vxComponents: { performance: 94, potential: 95, trajectory: 87 },
-    rxComponents: { financial: 30, contractual: 42, adaptability: 63 },
+    vxComponents: { technical: 9.4, marketImpact: 9.0, culturalAdaptation: 6.5, networkingBenefit: 4.0, ageDepreciation: 1.0, liabilities: 8.0, regulatoryRisk: 1.0, totalCost: 9.5 },
+    rxComponents: { tacticalGap: 7.0, contextualFit: 8.0, experienceProfile: 7.0, narrativeIndex: 9.0, mentalFortitude: 8.0, injuryMicroRisk: 1.5, suspensionRisk: 1.0, valueAtRisk: 9.5, marketJitter: 8.0 },
     c1Technical: 94, c2Tactical: 88, c3Physical: 80, c4Behavioral: 82, c5Narrative: 90, c6Economic: 28, c7Ai: 91,
     ast: 82, clf: 68, gne: 65, wse: 90, rbl: 38, sace: 72, scnPlus: 72,
     decision: "MONITORAR", confidence: 70,
@@ -403,8 +438,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Alexander Isak",
     vx: 88, rx: 48,
-    vxComponents: { performance: 89, potential: 88, trajectory: 87 },
-    rxComponents: { financial: 35, contractual: 50, adaptability: 59 },
+    vxComponents: { technical: 8.7, marketImpact: 8.0, culturalAdaptation: 7.0, networkingBenefit: 5.0, ageDepreciation: 2.5, liabilities: 8.0, regulatoryRisk: 1.5, totalCost: 9.0 },
+    rxComponents: { tacticalGap: 9.0, contextualFit: 8.0, experienceProfile: 8.0, narrativeIndex: 7.5, mentalFortitude: 8.0, injuryMicroRisk: 2.0, suspensionRisk: 1.0, valueAtRisk: 9.0, marketJitter: 6.0 },
     c1Technical: 87, c2Tactical: 84, c3Physical: 85, c4Behavioral: 84, c5Narrative: 80, c6Economic: 32, c7Ai: 86,
     ast: 80, clf: 72, gne: 82, wse: 86, rbl: 42, sace: 76, scnPlus: 74,
     decision: "MONITORAR", confidence: 65,
@@ -416,8 +451,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Liam Delap",
     vx: 74, rx: 72,
-    vxComponents: { performance: 72, potential: 80, trajectory: 70 },
-    rxComponents: { financial: 74, contractual: 68, adaptability: 74 },
+    vxComponents: { technical: 7.0, marketImpact: 4.5, culturalAdaptation: 8.0, networkingBenefit: 5.0, ageDepreciation: 1.0, liabilities: 1.5, regulatoryRisk: 1.5, totalCost: 3.0 },
+    rxComponents: { tacticalGap: 7.5, contextualFit: 7.0, experienceProfile: 5.0, narrativeIndex: 6.0, mentalFortitude: 7.0, injuryMicroRisk: 3.0, suspensionRisk: 1.5, valueAtRisk: 3.0, marketJitter: 4.0 },
     c1Technical: 70, c2Tactical: 68, c3Physical: 82, c4Behavioral: 76, c5Narrative: 68, c6Economic: 74, c7Ai: 72,
     ast: 68, clf: 72, gne: 74, wse: 70, rbl: 72, sace: 74, scnPlus: 71,
     decision: "MONITORAR", confidence: 65,
@@ -429,8 +464,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Jarrad Branthwaite",
     vx: 80, rx: 65,
-    vxComponents: { performance: 78, potential: 86, trajectory: 76 },
-    rxComponents: { financial: 58, contractual: 68, adaptability: 69 },
+    vxComponents: { technical: 7.6, marketImpact: 6.0, culturalAdaptation: 8.0, networkingBenefit: 5.5, ageDepreciation: 1.0, liabilities: 3.0, regulatoryRisk: 1.5, totalCost: 5.5 },
+    rxComponents: { tacticalGap: 8.5, contextualFit: 8.0, experienceProfile: 6.0, narrativeIndex: 7.0, mentalFortitude: 7.5, injuryMicroRisk: 3.5, suspensionRisk: 1.5, valueAtRisk: 5.5, marketJitter: 5.0 },
     c1Technical: 76, c2Tactical: 80, c3Physical: 84, c4Behavioral: 82, c5Narrative: 72, c6Economic: 55, c7Ai: 79,
     ast: 78, clf: 76, gne: 72, wse: 80, rbl: 62, sace: 78, scnPlus: 75,
     decision: "MONITORAR", confidence: 70,
@@ -442,8 +477,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Joao Pedro",
     vx: 77, rx: 68,
-    vxComponents: { performance: 76, potential: 80, trajectory: 75 },
-    rxComponents: { financial: 65, contractual: 70, adaptability: 69 },
+    vxComponents: { technical: 7.8, marketImpact: 5.5, culturalAdaptation: 8.5, networkingBenefit: 8.0, ageDepreciation: 1.5, liabilities: 3.0, regulatoryRisk: 2.0, totalCost: 5.0 },
+    rxComponents: { tacticalGap: 7.5, contextualFit: 7.5, experienceProfile: 6.5, narrativeIndex: 6.5, mentalFortitude: 7.0, injuryMicroRisk: 2.0, suspensionRisk: 1.5, valueAtRisk: 5.0, marketJitter: 5.0 },
     c1Technical: 78, c2Tactical: 74, c3Physical: 76, c4Behavioral: 74, c5Narrative: 70, c6Economic: 62, c7Ai: 75,
     ast: 72, clf: 80, gne: 70, wse: 76, rbl: 66, sace: 80, scnPlus: 73,
     decision: "MONITORAR", confidence: 62,
@@ -455,8 +490,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Antoine Semenyo",
     vx: 73, rx: 74,
-    vxComponents: { performance: 72, potential: 76, trajectory: 71 },
-    rxComponents: { financial: 76, contractual: 72, adaptability: 74 },
+    vxComponents: { technical: 7.2, marketImpact: 4.5, culturalAdaptation: 7.5, networkingBenefit: 5.0, ageDepreciation: 2.0, liabilities: 2.5, regulatoryRisk: 2.0, totalCost: 3.5 },
+    rxComponents: { tacticalGap: 7.0, contextualFit: 7.0, experienceProfile: 6.5, narrativeIndex: 6.0, mentalFortitude: 7.0, injuryMicroRisk: 2.5, suspensionRisk: 2.0, valueAtRisk: 3.5, marketJitter: 3.5 },
     c1Technical: 72, c2Tactical: 70, c3Physical: 82, c4Behavioral: 76, c5Narrative: 68, c6Economic: 76, c7Ai: 72,
     ast: 70, clf: 72, gne: 74, wse: 72, rbl: 74, sace: 74, scnPlus: 72,
     decision: "MONITORAR", confidence: 60,
@@ -468,8 +503,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Tyler Dibling",
     vx: 68, rx: 70,
-    vxComponents: { performance: 62, potential: 82, trajectory: 60 },
-    rxComponents: { financial: 78, contractual: 68, adaptability: 64 },
+    vxComponents: { technical: 7.2, marketImpact: 3.5, culturalAdaptation: 7.5, networkingBenefit: 4.0, ageDepreciation: 0.5, liabilities: 0.5, regulatoryRisk: 1.5, totalCost: 2.0 },
+    rxComponents: { tacticalGap: 6.5, contextualFit: 6.0, experienceProfile: 3.5, narrativeIndex: 5.5, mentalFortitude: 6.0, injuryMicroRisk: 1.5, suspensionRisk: 1.0, valueAtRisk: 2.0, marketJitter: 5.0 },
     c1Technical: 72, c2Tactical: 64, c3Physical: 70, c4Behavioral: 68, c5Narrative: 66, c6Economic: 78, c7Ai: 68,
     ast: 62, clf: 68, gne: 66, wse: 66, rbl: 72, sace: 66, scnPlus: 67,
     decision: "MONITORAR", confidence: 58,
@@ -481,8 +516,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Rodrigo Muniz",
     vx: 74, rx: 72,
-    vxComponents: { performance: 73, potential: 76, trajectory: 73 },
-    rxComponents: { financial: 74, contractual: 70, adaptability: 72 },
+    vxComponents: { technical: 7.4, marketImpact: 5.0, culturalAdaptation: 8.5, networkingBenefit: 7.5, ageDepreciation: 1.5, liabilities: 2.5, regulatoryRisk: 2.0, totalCost: 3.5 },
+    rxComponents: { tacticalGap: 7.5, contextualFit: 7.0, experienceProfile: 6.0, narrativeIndex: 6.0, mentalFortitude: 7.0, injuryMicroRisk: 2.0, suspensionRisk: 1.5, valueAtRisk: 3.5, marketJitter: 4.5 },
     c1Technical: 74, c2Tactical: 72, c3Physical: 78, c4Behavioral: 74, c5Narrative: 68, c6Economic: 74, c7Ai: 73,
     ast: 72, clf: 78, gne: 72, wse: 74, rbl: 72, sace: 78, scnPlus: 73,
     decision: "MONITORAR", confidence: 62,
@@ -496,8 +531,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Alejandro Garnacho",
     vx: 75, rx: 68,
-    vxComponents: { performance: 72, potential: 82, trajectory: 71 },
-    rxComponents: { financial: 62, contractual: 70, adaptability: 72 },
+    vxComponents: { technical: 7.8, marketImpact: 6.0, culturalAdaptation: 6.5, networkingBenefit: 5.5, ageDepreciation: 0.5, liabilities: 3.5, regulatoryRisk: 2.0, totalCost: 4.0 },
+    rxComponents: { tacticalGap: 7.0, contextualFit: 6.5, experienceProfile: 5.5, narrativeIndex: 7.0, mentalFortitude: 6.0, injuryMicroRisk: 1.5, suspensionRisk: 3.0, valueAtRisk: 4.0, marketJitter: 5.5 },
     c1Technical: 78, c2Tactical: 68, c3Physical: 80, c4Behavioral: 66, c5Narrative: 74, c6Economic: 60, c7Ai: 74,
     ast: 70, clf: 68, gne: 72, wse: 74, rbl: 64, sace: 68, scnPlus: 70,
     decision: "EMPRESTIMO", confidence: 72,
@@ -509,8 +544,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Enzo Fernandez",
     vx: 78, rx: 55,
-    vxComponents: { performance: 76, potential: 82, trajectory: 76 },
-    rxComponents: { financial: 42, contractual: 58, adaptability: 65 },
+    vxComponents: { technical: 8.2, marketImpact: 7.0, culturalAdaptation: 6.0, networkingBenefit: 6.5, ageDepreciation: 2.0, liabilities: 8.5, regulatoryRisk: 1.5, totalCost: 8.0 },
+    rxComponents: { tacticalGap: 7.5, contextualFit: 7.0, experienceProfile: 7.0, narrativeIndex: 6.5, mentalFortitude: 7.5, injuryMicroRisk: 2.0, suspensionRisk: 2.5, valueAtRisk: 8.0, marketJitter: 7.0 },
     c1Technical: 82, c2Tactical: 80, c3Physical: 76, c4Behavioral: 72, c5Narrative: 68, c6Economic: 40, c7Ai: 76,
     ast: 76, clf: 74, gne: 68, wse: 80, rbl: 52, sace: 70, scnPlus: 70,
     decision: "EMPRESTIMO", confidence: 60,
@@ -524,8 +559,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Kevin De Bruyne",
     vx: 70, rx: 32,
-    vxComponents: { performance: 75, potential: 55, trajectory: 80 },
-    rxComponents: { financial: 20, contractual: 38, adaptability: 38 },
+    vxComponents: { technical: 9.2, marketImpact: 8.0, culturalAdaptation: 6.0, networkingBenefit: 4.0, ageDepreciation: 8.0, liabilities: 9.5, regulatoryRisk: 3.0, totalCost: 8.5 },
+    rxComponents: { tacticalGap: 6.0, contextualFit: 6.5, experienceProfile: 9.5, narrativeIndex: 8.0, mentalFortitude: 8.5, injuryMicroRisk: 8.5, suspensionRisk: 1.0, valueAtRisk: 8.5, marketJitter: 7.0 },
     c1Technical: 92, c2Tactical: 90, c3Physical: 55, c4Behavioral: 82, c5Narrative: 78, c6Economic: 18, c7Ai: 68,
     ast: 65, clf: 58, gne: 45, wse: 72, rbl: 28, sace: 55, scnPlus: 55,
     decision: "RECUSAR", confidence: 88,
@@ -537,8 +572,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Jamie Vardy",
     vx: 50, rx: 55,
-    vxComponents: { performance: 52, potential: 35, trajectory: 63 },
-    rxComponents: { financial: 70, contractual: 50, adaptability: 45 },
+    vxComponents: { technical: 5.8, marketImpact: 5.0, culturalAdaptation: 7.0, networkingBenefit: 3.0, ageDepreciation: 9.5, liabilities: 5.0, regulatoryRisk: 1.0, totalCost: 2.5 },
+    rxComponents: { tacticalGap: 5.0, contextualFit: 5.5, experienceProfile: 9.0, narrativeIndex: 7.5, mentalFortitude: 9.0, injuryMicroRisk: 7.5, suspensionRisk: 2.0, valueAtRisk: 2.5, marketJitter: 2.0 },
     c1Technical: 58, c2Tactical: 65, c3Physical: 40, c4Behavioral: 80, c5Narrative: 75, c6Economic: 70, c7Ai: 55,
     ast: 55, clf: 50, gne: 40, wse: 55, rbl: 60, sace: 48, scnPlus: 52,
     decision: "RECUSAR", confidence: 90,
@@ -550,8 +585,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Son Heung-min",
     vx: 72, rx: 35,
-    vxComponents: { performance: 74, potential: 58, trajectory: 84 },
-    rxComponents: { financial: 22, contractual: 38, adaptability: 45 },
+    vxComponents: { technical: 8.5, marketImpact: 8.5, culturalAdaptation: 5.5, networkingBenefit: 4.0, ageDepreciation: 7.5, liabilities: 9.0, regulatoryRisk: 2.5, totalCost: 7.0 },
+    rxComponents: { tacticalGap: 6.5, contextualFit: 6.0, experienceProfile: 9.0, narrativeIndex: 8.5, mentalFortitude: 8.5, injuryMicroRisk: 5.0, suspensionRisk: 1.0, valueAtRisk: 7.0, marketJitter: 6.0 },
     c1Technical: 85, c2Tactical: 82, c3Physical: 60, c4Behavioral: 90, c5Narrative: 85, c6Economic: 20, c7Ai: 72,
     ast: 68, clf: 62, gne: 50, wse: 70, rbl: 30, sace: 60, scnPlus: 58,
     decision: "RECUSAR", confidence: 85,
@@ -565,8 +600,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Lucas Paqueta",
     vx: 76, rx: 42,
-    vxComponents: { performance: 78, potential: 70, trajectory: 80 },
-    rxComponents: { financial: 50, contractual: 45, adaptability: 31 },
+    vxComponents: { technical: 8.2, marketImpact: 6.0, culturalAdaptation: 8.0, networkingBenefit: 7.5, ageDepreciation: 3.0, liabilities: 7.0, regulatoryRisk: 9.5, totalCost: 6.0 },
+    rxComponents: { tacticalGap: 7.5, contextualFit: 7.0, experienceProfile: 7.5, narrativeIndex: 2.0, mentalFortitude: 5.0, injuryMicroRisk: 2.0, suspensionRisk: 9.5, valueAtRisk: 6.0, marketJitter: 8.0 },
     c1Technical: 82, c2Tactical: 78, c3Physical: 74, c4Behavioral: 30, c5Narrative: 35, c6Economic: 48, c7Ai: 58,
     ast: 72, clf: 65, gne: 60, wse: 74, rbl: 32, sace: 38, scnPlus: 55,
     decision: "ALERTA_CINZA", confidence: 92,
@@ -578,8 +613,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Bruno Fernandes",
     vx: 74, rx: 50,
-    vxComponents: { performance: 76, potential: 65, trajectory: 81 },
-    rxComponents: { financial: 42, contractual: 55, adaptability: 53 },
+    vxComponents: { technical: 8.4, marketImpact: 7.0, culturalAdaptation: 6.0, networkingBenefit: 5.5, ageDepreciation: 5.0, liabilities: 8.5, regulatoryRisk: 2.0, totalCost: 7.5 },
+    rxComponents: { tacticalGap: 7.0, contextualFit: 7.0, experienceProfile: 8.5, narrativeIndex: 4.5, mentalFortitude: 5.5, injuryMicroRisk: 2.5, suspensionRisk: 5.5, valueAtRisk: 7.5, marketJitter: 5.0 },
     c1Technical: 84, c2Tactical: 80, c3Physical: 68, c4Behavioral: 58, c5Narrative: 60, c6Economic: 40, c7Ai: 68,
     ast: 72, clf: 60, gne: 55, wse: 76, rbl: 48, sace: 55, scnPlus: 62,
     decision: "ALERTA_CINZA", confidence: 75,
@@ -591,8 +626,8 @@ const analysisData: AnalysisSeed[] = [
   {
     playerName: "Dominic Solanke",
     vx: 70, rx: 60,
-    vxComponents: { performance: 71, potential: 66, trajectory: 73 },
-    rxComponents: { financial: 55, contractual: 62, adaptability: 63 },
+    vxComponents: { technical: 6.8, marketImpact: 5.5, culturalAdaptation: 7.0, networkingBenefit: 5.0, ageDepreciation: 3.0, liabilities: 6.5, regulatoryRisk: 1.5, totalCost: 7.0 },
+    rxComponents: { tacticalGap: 6.5, contextualFit: 6.0, experienceProfile: 6.5, narrativeIndex: 5.0, mentalFortitude: 5.5, injuryMicroRisk: 3.0, suspensionRisk: 1.5, valueAtRisk: 7.0, marketJitter: 5.5 },
     c1Technical: 68, c2Tactical: 72, c3Physical: 74, c4Behavioral: 65, c5Narrative: 58, c6Economic: 54, c7Ai: 66,
     ast: 66, clf: 62, gne: 60, wse: 68, rbl: 58, sace: 60, scnPlus: 63,
     decision: "ALERTA_CINZA", confidence: 70,
@@ -672,14 +707,24 @@ async function seed() {
     role: "admin",
   });
 
-  // 3. League
-  console.log("  → Creating league...");
-  await db.insert(leagues).values({
-    id: LEAGUE_ID,
-    name: "Premier League",
-    country: "England",
-    tier: 1,
-  });
+  // 3. Leagues (Top 5)
+  console.log("  → Creating Top 5 leagues...");
+  const leagueData = [
+    { name: "Premier League", country: "England" },
+    { name: "La Liga", country: "Spain" },
+    { name: "Serie A", country: "Italy" },
+    { name: "Bundesliga", country: "Germany" },
+    { name: "Ligue 1", country: "France" },
+  ];
+  await db.insert(leagues).values(
+    leagueData.map((l) => ({
+      id: LEAGUE_IDS_TOP5[l.name as keyof typeof LEAGUE_IDS_TOP5],
+      name: l.name,
+      country: l.country,
+      tier: 1,
+      externalId: LEAGUE_EXTERNAL_IDS[l.name],
+    }))
+  );
 
   // 4. Clubs (all 20 Premier League clubs)
   console.log("  → Creating 20 clubs...");

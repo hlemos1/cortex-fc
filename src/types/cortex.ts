@@ -311,6 +311,52 @@ export interface BoardAdvisorOutput {
   reasoning: string;
 }
 
+// Coaching Assist specific
+export interface CoachingAssistInput {
+  playerId: string;
+  playerName: string;
+  position: PlayerCluster;
+  age: number;
+  currentClub: string;
+  strengths: string[];
+  weaknesses: string[];
+  targetRole: string; // e.g. "inverted fullback", "false 9"
+  formationContext?: string;
+  developmentHorizon?: "short" | "medium" | "long"; // 3mo, 6mo, 12mo+
+  additionalContext?: string;
+}
+
+export interface CoachingAssistOutput {
+  developmentPlan: {
+    phase: string;
+    duration: string;
+    objectives: string[];
+    drills: string[];
+    kpis: string[];
+  }[];
+  tacticalIntegration: {
+    currentFit: number; // 0-100
+    projectedFit: number; // 0-100 after development
+    keyAdaptations: string[];
+    formationSuggestions: string[];
+  };
+  physicalPlan: {
+    focus: string[];
+    risks: string[];
+    loadManagement: string;
+  };
+  mentalDevelopment: {
+    areas: string[];
+    approach: string;
+  };
+  timeline: {
+    milestone: string;
+    expectedDate: string;
+    metric: string;
+  }[];
+  reasoning: string;
+}
+
 // Temporal Evolution
 export interface TemporalDataPoint {
   date: Date;

@@ -61,7 +61,22 @@ export const organizations = pgTable("organizations", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   tier: subscriptionTierEnum("tier").default("free").notNull(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  trialEndsAt: timestamp("trial_ends_at"),
   logoUrl: text("logo_url"),
+  // White-label / branding
+  brandPrimaryColor: text("brand_primary_color"), // hex e.g. "#10b981"
+  brandAccentColor: text("brand_accent_color"),
+  brandDarkBg: text("brand_dark_bg"), // hex for main bg
+  customDomain: text("custom_domain"), // e.g. "analytics.myclubfc.com"
+  faviconUrl: text("favicon_url"),
+  // SSO
+  ssoProvider: text("sso_provider"), // "saml" | "oidc" | null
+  ssoEntityId: text("sso_entity_id"),
+  ssoLoginUrl: text("sso_login_url"),
+  ssoCertificate: text("sso_certificate"),
+  ssoEnabled: boolean("sso_enabled").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -76,6 +91,87 @@ export const users = pgTable("users", {
   role: text("role").default("analyst").notNull(), // admin, analyst, viewer
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id)
+      .notNull(),
+    keyHash: text("key_hash").notNull().unique(), // SHA-256 of the raw key
+    keyPrefix: text("key_prefix").notNull(), // first 8 chars for display (e.g. "ctx_abc1...")
+    name: text("name").default("Default").notNull(),
+    rateLimitPerMin: integer("rate_limit_per_min").default(60),
+    isActive: boolean("is_active").default(true).notNull(),
+    lastUsedAt: timestamp("last_used_at"),
+    expiresAt: timestamp("expires_at"),
+    createdBy: uuid("created_by").references(() => users.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_ak_hash").on(table.keyHash),
+    index("idx_ak_org").on(table.orgId),
+  ]
+);
+
+export const webhookEndpoints = pgTable(
+  "webhook_endpoints",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id)
+      .notNull(),
+    url: text("url").notNull(),
+    secret: text("secret").notNull(), // HMAC signing secret
+    events: jsonb("events").notNull(), // ["analysis_complete", "report_generated"]
+    isActive: boolean("is_active").default(true).notNull(),
+    lastTriggeredAt: timestamp("last_triggered_at"),
+    failCount: integer("fail_count").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("idx_wh_org").on(table.orgId)]
+);
+
+export const orgMembers = pgTable(
+  "org_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id)
+      .notNull(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id)
+      .notNull(),
+    role: text("role").default("analyst").notNull(), // admin, analyst, viewer
+    joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_om_user").on(table.userId),
+    index("idx_om_org").on(table.orgId),
+  ]
+);
+
+export const orgInvites = pgTable(
+  "org_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id)
+      .notNull(),
+    role: text("role").default("analyst").notNull(),
+    token: text("token").notNull().unique(),
+    invitedBy: uuid("invited_by").references(() => users.id),
+    expiresAt: timestamp("expires_at").notNull(),
+    acceptedAt: timestamp("accepted_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_oi_token").on(table.token),
+    index("idx_oi_email").on(table.email),
+  ]
+);
 
 // ============================================
 // FOOTBALL ENTITIES
@@ -304,7 +400,7 @@ export const reports = pgTable("reports", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
   type: text("type").notNull(), // weekly_newsletter, player_report, squad_analysis, scouting_report
-  orgId: uuid("org_id").references(() => organizations.id),
+  orgId: uuid("org_id").references(() => organizations.id).notNull(),
   content: jsonb("content"), // structured report data
   htmlContent: text("html_content"),
   pdfUrl: text("pdf_url"),
@@ -341,6 +437,102 @@ export const agentRuns = pgTable(
 );
 
 // ============================================
+// NOTIFICATIONS
+// ============================================
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id)
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id)
+      .notNull(),
+    type: text("type").notNull(), // "contract_alert" | "analysis_complete" | "agent_complete" | "scouting_update" | "market_opportunity"
+    title: text("title").notNull(),
+    body: text("body"),
+    entityType: text("entity_type"), // "player" | "analysis" | "report"
+    entityId: text("entity_id"),
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_notif_user").on(table.userId),
+    index("idx_notif_org").on(table.orgId),
+    index("idx_notif_read").on(table.readAt),
+  ]
+);
+
+// ============================================
+// CHAT IA
+// ============================================
+
+export const chatConversations = pgTable(
+  "chat_conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id)
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id)
+      .notNull(),
+    title: text("title").default("Nova conversa").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_cc_org").on(table.orgId),
+    index("idx_cc_user").on(table.userId),
+  ]
+);
+
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .references(() => chatConversations.id, { onDelete: "cascade" })
+      .notNull(),
+    role: text("role").notNull(), // "user" | "assistant"
+    content: text("content").notNull(),
+    tokensUsed: integer("tokens_used"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_cm_conv").on(table.conversationId),
+  ]
+);
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id").references(() => organizations.id),
+    userId: uuid("user_id").references(() => users.id),
+    action: text("action").notNull(), // e.g. "analysis.created", "member.invited", "settings.updated"
+    entityType: text("entity_type"), // e.g. "analysis", "player", "api_key", "webhook"
+    entityId: text("entity_id"),
+    metadata: jsonb("metadata"), // extra context
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_al_org").on(table.orgId),
+    index("idx_al_user").on(table.userId),
+    index("idx_al_action").on(table.action),
+    index("idx_al_created").on(table.createdAt),
+  ]
+);
+
+// ============================================
 // RELATIONS
 // ============================================
 
@@ -371,6 +563,60 @@ export const neuralAnalysesRelations = relations(
     }),
   })
 );
+
+export const transfersRelations = relations(transfers, ({ one }) => ({
+  player: one(players, {
+    fields: [transfers.playerId],
+    references: [players.id],
+  }),
+  fromClub: one(clubs, {
+    fields: [transfers.fromClubId],
+    references: [clubs.id],
+    relationName: "fromClub",
+  }),
+  toClub: one(clubs, {
+    fields: [transfers.toClubId],
+    references: [clubs.id],
+    relationName: "toClub",
+  }),
+}));
+
+export const playerMatchStatsRelations = relations(playerMatchStats, ({ one }) => ({
+  player: one(players, {
+    fields: [playerMatchStats.playerId],
+    references: [players.id],
+  }),
+  match: one(matches, {
+    fields: [playerMatchStats.matchId],
+    references: [matches.id],
+  }),
+}));
+
+export const orgMembersRelations = relations(orgMembers, ({ one }) => ({
+  user: one(users, {
+    fields: [orgMembers.userId],
+    references: [users.id],
+  }),
+  org: one(organizations, {
+    fields: [orgMembers.orgId],
+    references: [organizations.id],
+  }),
+}));
+
+export const chatConversationsRelations = relations(chatConversations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [chatConversations.userId],
+    references: [users.id],
+  }),
+  messages: many(chatMessages),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
+  }),
+}));
 
 export const clubsRelations = relations(clubs, ({ one, many }) => ({
   league: one(leagues, {

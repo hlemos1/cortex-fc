@@ -12,9 +12,14 @@ import {
   Search,
   FileText,
   Settings,
+  CreditCard,
+  Monitor,
+  Building2,
+  Shield,
+  MessageSquare,
+  ArrowRightLeft,
   ChevronLeft,
   ChevronRight,
-  Bell,
   User,
   Menu,
   X,
@@ -22,6 +27,8 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { OrgSwitcher } from "@/components/cortex/OrgSwitcher"
+import { NotificationsDropdown } from "@/components/cortex/NotificationsDropdown"
 import {
   Tooltip,
   TooltipContent,
@@ -34,6 +41,12 @@ const navItems = [
   { href: "/analysis", label: "Análises", icon: Activity },
   { href: "/scouting", label: "Scouting", icon: Search },
   { href: "/reports", label: "Relatórios", icon: FileText },
+  { href: "/chat", label: "Chat IA", icon: MessageSquare },
+  { href: "/simulator", label: "Simulador", icon: ArrowRightLeft },
+  { href: "/agent-console", label: "Console IA", icon: Monitor },
+  { href: "/holding", label: "Holding", icon: Building2 },
+  { href: "/audit-log", label: "Audit Log", icon: Shield },
+  { href: "/billing", label: "Assinatura", icon: CreditCard },
   { href: "/settings", label: "Configurações", icon: Settings },
 ]
 
@@ -78,7 +91,7 @@ export default function DashboardLayout({
           const Icon = item.icon
 
           // Add separator before Settings
-          const showSeparator = item.href === "/settings"
+          const showSeparator = item.href === "/billing"
 
           const linkContent = (
             <Link
@@ -197,13 +210,14 @@ export default function DashboardLayout({
             </Button>
             <span className="text-xs text-zinc-600 font-mono">v2.1.0</span>
             <span className="text-zinc-800">|</span>
-            <span className="text-xs text-zinc-500">{session?.user?.orgName || "Carregando..."}</span>
+            <OrgSwitcher
+              currentOrgId={session?.user?.orgId ?? ""}
+              currentOrgName={session?.user?.orgName ?? "Carregando..."}
+            />
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon-sm" className="text-zinc-500 hover:text-zinc-300">
-              <Bell className="w-4 h-4" />
-            </Button>
+            <NotificationsDropdown />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center">
                 <User className="w-4 h-4 text-zinc-400" />

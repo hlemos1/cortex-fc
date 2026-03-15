@@ -21,7 +21,13 @@ import { NeuralRadar } from "@/components/cortex/NeuralRadar"
 import { AlgorithmBars } from "@/components/cortex/AlgorithmBars"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { UpgradePrompt } from "@/components/cortex/UpgradePrompt"
-import { getPlayerById } from "@/db/queries"
+import { SeasonStats } from "@/components/cortex/SeasonStats"
+import { PerformanceChart } from "@/components/cortex/PerformanceChart"
+import { PositionHeatmap } from "@/components/cortex/PositionHeatmap"
+import { TransferTimeline } from "@/components/cortex/TransferTimeline"
+import { PlayerAgentsBar } from "@/components/cortex/PlayerAgentsBar"
+import { CoachingAssistPanel } from "@/components/cortex/CoachingAssistPanel"
+import { getPlayerById, getPlayerSeasonStats, getPlayerMatchPerformance, getPlayerTransfers } from "@/db/queries"
 import {
   formatPlayerForUI,
   toNeuralLayers,
@@ -38,7 +44,12 @@ export default async function PlayerDetailPage({
 }) {
   const { id } = await params
 
-  const dbPlayer = await getPlayerById(id)
+  const [dbPlayer, seasonStats, matchPerformance, transferHistory] = await Promise.all([
+    getPlayerById(id),
+    getPlayerSeasonStats(id),
+    getPlayerMatchPerformance(id),
+    getPlayerTransfers(id),
+  ])
 
   if (!dbPlayer) {
     return (
@@ -160,6 +171,17 @@ export default async function PlayerDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Agent Actions Bar */}
+      <PlayerAgentsBar
+        playerId={id}
+        playerName={player.name}
+        position={player.positionCluster as import("@/types/cortex").PlayerCluster}
+        age={player.age ?? 25}
+        currentClub={player.club}
+        marketValue={player.marketValue ?? 0}
+        analysisId={latest?.id}
+      />
 
       {latest ? (
         <>
@@ -342,6 +364,71 @@ export default async function PlayerDetailPage({
             </CardContent>
           </Card>
 
+          {/* Season Stats */}
+          {seasonStats && (
+            <Card className="bg-zinc-900/80 border-zinc-800 glass animate-slide-up">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-cyan-500" />
+                  Estatisticas da Temporada
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SeasonStats stats={seasonStats} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Performance Chart + Position Heatmap */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {matchPerformance.length > 0 && (
+              <Card className="bg-zinc-900/80 border-zinc-800 glass card-hover animate-slide-up md:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                    Desempenho por Jogo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PerformanceChart data={matchPerformance} metric="rating" />
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="bg-zinc-900/80 border-zinc-800 glass card-hover animate-slide-up">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-emerald-500" />
+                  Mapa de Posicao
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex justify-center py-4">
+                <PositionHeatmap
+                  positionCluster={player.positionCluster}
+                  positionDetail={dbPlayer.positionDetail ?? undefined}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Transfer Timeline */}
+          {transferHistory.length > 0 && (
+            <Card className="bg-zinc-900/80 border-zinc-800 glass animate-slide-up">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-amber-500" />
+                  Historico de Transferencias
+                  <span className="ml-auto text-[10px] font-mono text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">
+                    {transferHistory.length} movimentacoes
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TransferTimeline transfers={transferHistory} />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Analysis History — Timeline */}
           {analyses.length > 1 && (
             <Card className="bg-zinc-900/80 border-zinc-800 glass animate-slide-up">
@@ -432,6 +519,22 @@ export default async function PlayerDetailPage({
             </CardContent>
           </Card>
 
+          {/* Position Heatmap (always available) */}
+          <Card className="bg-zinc-900/80 border-zinc-800 glass animate-slide-up max-w-sm mx-auto">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-emerald-500" />
+                Mapa de Posicao
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex justify-center py-4">
+              <PositionHeatmap
+                positionCluster={player.positionCluster}
+                positionDetail={dbPlayer.positionDetail ?? undefined}
+              />
+            </CardContent>
+          </Card>
+
           {/* Upgrade prompt for AI analysis */}
           <UpgradePrompt
             feature="Analise Neural com IA"
@@ -441,6 +544,15 @@ export default async function PlayerDetailPage({
           />
         </>
       )}
+
+      {/* Coaching Assist */}
+      <CoachingAssistPanel
+        playerId={id}
+        playerName={player.name}
+        position={player.positionCluster as import("@/types/cortex").PlayerCluster}
+        age={player.age ?? 25}
+        currentClub={player.club}
+      />
 
       {/* Action button */}
       <div className="flex justify-end animate-fade-in">
