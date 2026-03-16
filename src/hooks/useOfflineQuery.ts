@@ -70,7 +70,7 @@ export function useOfflineQuery<T>({
   // Refetch when coming back online
   useEffect(() => {
     if (isOnline && isFromCache && enabled) {
-      fetchData()
+      queueMicrotask(() => fetchData())
     }
   }, [isOnline]) // eslint-disable-line react-hooks/exhaustive-deps
 

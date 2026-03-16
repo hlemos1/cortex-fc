@@ -188,7 +188,9 @@ export function useNotifications() {
   }, [toast, startPolling, stopPolling])
 
   // Keep ref in sync with latest connect
-  connectRef.current = connect
+  useEffect(() => {
+    connectRef.current = connect
+  })
 
   useEffect(() => {
     mountedRef.current = true

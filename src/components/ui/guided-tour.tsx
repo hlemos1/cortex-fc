@@ -126,7 +126,7 @@ function GuidedTour({ steps, tourId, onComplete }: GuidedTourProps) {
       return () => clearTimeout(timer)
     } else {
       // Target not found — skip step or close
-      setTargetRect(null)
+      queueMicrotask(() => setTargetRect(null))
     }
   }, [active, step])
 
