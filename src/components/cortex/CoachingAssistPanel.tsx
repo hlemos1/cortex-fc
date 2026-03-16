@@ -85,7 +85,7 @@ export function CoachingAssistPanel({ playerId, playerName, position, age, curre
               className="text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 text-xs gap-1"
             >
               <Bot className="w-3.5 h-3.5" />
-              Coaching Assist
+              Assistente Tatico
             </Button>
           )}
         </div>

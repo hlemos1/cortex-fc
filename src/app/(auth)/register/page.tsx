@@ -1,10 +1,46 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
-import { Brain, Eye, EyeOff, Mail, Lock, User, Building, AlertCircle } from "lucide-react"
+import { Brain, Eye, EyeOff, Mail, Lock, User, Building, AlertCircle, Check } from "lucide-react"
+
+function PasswordStrength({ password }: { password: string }) {
+  const strength = useMemo(() => {
+    let score = 0
+    if (password.length >= 6) score++
+    if (password.length >= 10) score++
+    if (/[A-Z]/.test(password)) score++
+    if (/[0-9]/.test(password)) score++
+    if (/[^A-Za-z0-9]/.test(password)) score++
+    return score
+  }, [password])
+
+  if (!password) return null
+
+  const labels = ["Muito fraca", "Fraca", "Media", "Forte", "Muito forte"]
+  const colors = ["bg-red-500", "bg-red-400", "bg-amber-400", "bg-emerald-400", "bg-emerald-500"]
+  const level = Math.min(strength, 4)
+
+  return (
+    <div className="space-y-1 mt-1.5">
+      <div className="flex gap-1">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+              i <= level ? colors[level] : "bg-zinc-800"
+            }`}
+          />
+        ))}
+      </div>
+      <p className={`text-[10px] ${level >= 3 ? "text-emerald-400" : level >= 2 ? "text-amber-400" : "text-red-400"}`}>
+        {labels[level]}
+      </p>
+    </div>
+  )
+}
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -17,6 +53,9 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const passwordsMatch = password.length > 0 && confirmPassword.length > 0 && password === confirmPassword
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
@@ -110,16 +149,30 @@ export default function RegisterPage() {
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${email && emailValid ? "text-emerald-400" : "text-zinc-600"}`} />
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
-                  className="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
+                  className={`w-full bg-zinc-900/80 border rounded-lg pl-10 pr-10 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 transition-colors ${
+                    email && emailValid
+                      ? "border-emerald-500/30 focus:border-emerald-500 focus:ring-emerald-500/30"
+                      : email && !emailValid
+                        ? "border-red-500/30 focus:border-red-500 focus:ring-red-500/30"
+                        : "border-zinc-800 focus:border-emerald-500/50 focus:ring-emerald-500/30"
+                  }`}
                 />
+                {email && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {emailValid ? <Check className="w-4 h-4 text-emerald-400" /> : <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
+                  </div>
+                )}
               </div>
+              {email && !emailValid && (
+                <p className="text-[10px] text-red-400">Email invalido</p>
+              )}
             </div>
 
             {/* Club */}
@@ -146,14 +199,20 @@ export default function RegisterPage() {
                 Senha
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${password.length >= 6 ? "text-emerald-400" : "text-zinc-600"}`} />
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
+                  className={`w-full bg-zinc-900/80 border rounded-lg pl-10 pr-10 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 transition-colors ${
+                    password && password.length < 6
+                      ? "border-red-500/30 focus:border-red-500 focus:ring-red-500/30"
+                      : password.length >= 6
+                        ? "border-emerald-500/30 focus:border-emerald-500 focus:ring-emerald-500/30"
+                        : "border-zinc-800 focus:border-emerald-500/50 focus:ring-emerald-500/30"
+                  }`}
                 />
                 <button
                   type="button"
@@ -167,6 +226,7 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+              <PasswordStrength password={password} />
             </div>
 
             {/* Confirm Password */}
@@ -175,14 +235,20 @@ export default function RegisterPage() {
                 Confirmar senha
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${passwordsMatch ? "text-emerald-400" : "text-zinc-600"}`} />
                 <input
                   id="confirmPassword"
                   type={showConfirm ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-zinc-900/80 border border-zinc-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
+                  className={`w-full bg-zinc-900/80 border rounded-lg pl-10 pr-10 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 transition-colors ${
+                    confirmPassword && !passwordsMatch
+                      ? "border-red-500/30 focus:border-red-500 focus:ring-red-500/30"
+                      : passwordsMatch
+                        ? "border-emerald-500/30 focus:border-emerald-500 focus:ring-emerald-500/30"
+                        : "border-zinc-800 focus:border-emerald-500/50 focus:ring-emerald-500/30"
+                  }`}
                 />
                 <button
                   type="button"
@@ -196,6 +262,14 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+              {confirmPassword && !passwordsMatch && (
+                <p className="text-[10px] text-red-400">Senhas nao coincidem</p>
+              )}
+              {passwordsMatch && (
+                <p className="text-[10px] text-emerald-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Senhas coincidem
+                </p>
+              )}
             </div>
 
             {/* Error message */}

@@ -2,11 +2,14 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Search, ArrowUpDown, User, Filter, Users, X } from "lucide-react"
+import { Search, ArrowUpDown, Filter, Users, X, Globe } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
+import { ExternalPlayerSearch } from "@/components/players/ExternalPlayerSearch"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PlayerAvatar } from "@/components/ui/player-avatar"
 import type { CortexDecision } from "@/types/cortex"
 
 export interface PlayerListItem {
@@ -117,11 +120,14 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
             Base de dados neural — {players.length} jogadores registrados
           </p>
         </div>
-        <Link href="/analysis/new">
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 transition-all duration-200 hover:shadow-emerald-900/40 hover:-translate-y-0.5">
-            Nova Analise
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <ExternalPlayerSearch />
+          <Link href="/analysis/new">
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 transition-all duration-200 hover:shadow-emerald-900/40 hover:-translate-y-0.5">
+              Nova Analise
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -182,8 +188,70 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
         </CardContent>
       </Card>
 
-      {/* Table */}
-      <Card className="bg-zinc-900/80 border-zinc-800 animate-slide-up stagger-2">
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-2 animate-slide-up stagger-2">
+        {filtered.map((player) => (
+          <Link
+            key={player.id}
+            href={`/players/${player.id}`}
+            className="block bg-zinc-900/80 border border-zinc-800 rounded-xl p-3 active:bg-zinc-800/60 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <PlayerAvatar src={player.photoUrl} name={player.name} size={40} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-zinc-200 truncate">{player.name}</p>
+                  {player.decision ? (
+                    <DecisionBadge decision={player.decision} size="sm" />
+                  ) : (
+                    <span className="text-zinc-700 text-[10px] flex-shrink-0">Sem analise</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
+                  <span>{player.position}</span>
+                  <span className="text-zinc-700">·</span>
+                  <span>{player.club}</span>
+                  {player.age && (
+                    <>
+                      <span className="text-zinc-700">·</span>
+                      <span>{player.age}a</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-2 pt-2 border-t border-zinc-800/50">
+              <span className="text-xs text-zinc-400 font-mono">&euro;{player.marketValue}M</span>
+              {player.scn !== undefined && (
+                <span className="font-mono text-cyan-400 text-[10px] font-semibold bg-cyan-500/10 px-1.5 py-0.5 rounded">
+                  SCN+ {player.scn}
+                </span>
+              )}
+              <span className="text-[10px] text-zinc-600 ml-auto">{player.nationality}</span>
+            </div>
+          </Link>
+        ))}
+        {filtered.length === 0 && players.length === 0 && (
+          <EmptyState
+            icon={Globe}
+            title="Nenhum jogador registrado"
+            description="Importe jogadores do banco mundial para comecar suas analises"
+            actionLabel="Buscar Jogador Mundial"
+            onAction={() => {}}
+          />
+        )}
+        {filtered.length === 0 && players.length > 0 && (
+          <EmptyState
+            icon={Search}
+            secondaryIcon={Filter}
+            title="Nenhum jogador encontrado"
+            description="Tente ajustar os filtros de busca"
+          />
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <Card className="bg-zinc-900/80 border-zinc-800 animate-slide-up stagger-2 hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -223,9 +291,7 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
                     style={{ animationDelay: `${(index + 1) * 40}ms` }}
                   >
                     <td className="py-3 px-4">
-                      <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center ring-1 ring-zinc-700/50 transition-all group-hover:ring-emerald-500/30">
-                        <User className="w-4 h-4 text-zinc-500" />
-                      </div>
+                      <PlayerAvatar src={player.photoUrl} name={player.name} size={32} />
                     </td>
                     <td className="py-3 px-3">
                       <Link
@@ -268,16 +334,22 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
               </tbody>
             </table>
           </div>
-          {filtered.length === 0 && (
-            <div className="py-16 text-center animate-fade-in">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <Search className="w-8 h-8 text-zinc-700" />
-                <Users className="w-10 h-10 text-zinc-800" />
-                <Filter className="w-6 h-6 text-zinc-700" />
-              </div>
-              <p className="text-zinc-500 text-sm font-medium">Nenhum jogador encontrado</p>
-              <p className="text-zinc-700 text-xs mt-1">Tente ajustar os filtros de busca</p>
-            </div>
+          {filtered.length === 0 && players.length === 0 && (
+            <EmptyState
+              icon={Globe}
+              title="Nenhum jogador registrado"
+              description="Importe jogadores do banco mundial para comecar suas analises"
+              actionLabel="Buscar Jogador Mundial"
+              onAction={() => {}}
+            />
+          )}
+          {filtered.length === 0 && players.length > 0 && (
+            <EmptyState
+              icon={Search}
+              secondaryIcon={Filter}
+              title="Nenhum jogador encontrado"
+              description="Tente ajustar os filtros de busca"
+            />
           )}
         </CardContent>
       </Card>

@@ -26,6 +26,7 @@ import {
 import { NeuralRadar } from "@/components/cortex/NeuralRadar"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { AlgorithmBars } from "@/components/cortex/AlgorithmBars"
+import { useAutoSave } from "@/hooks/useAutoSave"
 import type { CortexDecision, NeuralLayers, AlgorithmScores, OracleOutput } from "@/types/cortex"
 
 interface APIPlayer {
@@ -217,6 +218,43 @@ export default function NewAnalysisPage() {
   const [c6, setC6] = useState(60)
   const [c7, setC7] = useState(60)
 
+  // Auto-save draft
+  interface DraftData {
+    step: number
+    selectedPlayerId: string
+    clubContext: string
+    technical: number
+    marketImpact: number
+    c1: number; c2: number; c3: number; c4: number; c5: number; c6: number; c7: number
+  }
+  const { save: saveDraft, load: loadDraft, clear: clearDraft, lastSaved } = useAutoSave<DraftData>({ key: "analysis-new" })
+
+  // Restore draft on mount
+  useEffect(() => {
+    const draft = loadDraft()
+    if (draft) {
+      if (draft.selectedPlayerId) setSelectedPlayerId(draft.selectedPlayerId)
+      if (draft.clubContext) setClubContext(draft.clubContext)
+      if (draft.step) setStep(draft.step)
+      if (draft.technical) setTechnical(draft.technical)
+      if (draft.marketImpact) setMarketImpact(draft.marketImpact)
+      if (draft.c1) setC1(draft.c1)
+      if (draft.c2) setC2(draft.c2)
+      if (draft.c3) setC3(draft.c3)
+      if (draft.c4) setC4(draft.c4)
+      if (draft.c5) setC5(draft.c5)
+      if (draft.c6) setC6(draft.c6)
+      if (draft.c7) setC7(draft.c7)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Save draft on changes
+  useEffect(() => {
+    if (showResult) return
+    saveDraft({ step, selectedPlayerId, clubContext, technical, marketImpact, c1, c2, c3, c4, c5, c6, c7 })
+  }, [step, selectedPlayerId, clubContext, technical, marketImpact, c1, c2, c3, c4, c5, c6, c7, showResult, saveDraft])
+
   const selectedPlayer = players.find((p) => p.id === selectedPlayerId)
 
   const filteredPlayers = useMemo(() => {
@@ -356,6 +394,8 @@ export default function NewAnalysisPage() {
       if (!res.ok) {
         const err = await res.json()
         console.error("Failed to save analysis:", err)
+      } else {
+        clearDraft()
       }
     } catch (err) {
       console.error("Failed to save analysis:", err)
@@ -482,9 +522,16 @@ export default function NewAnalysisPage() {
           <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">
             Nova Analise Neural
           </h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            Configure os parametros e execute o ORACLE
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-sm text-zinc-500">
+              Configure os parametros e execute o ORACLE
+            </p>
+            {lastSaved && !showResult && (
+              <span className="text-[10px] text-zinc-600 font-mono">
+                Rascunho salvo
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

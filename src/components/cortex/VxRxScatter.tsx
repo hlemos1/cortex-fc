@@ -90,7 +90,8 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
 
 export function VxRxScatter({ data, height = 400 }: VxRxScatterProps) {
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <div className="overflow-x-auto -mx-2 px-2">
+    <ResponsiveContainer width="100%" height={height} minWidth={480}>
       <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
         <defs>
           <filter id="dotGlow">
@@ -171,5 +172,6 @@ export function VxRxScatter({ data, height = 400 }: VxRxScatterProps) {
         </Scatter>
       </ScatterChart>
     </ResponsiveContainer>
+    </div>
   )
 }

@@ -153,9 +153,9 @@ export function TeamClient({ members, invites, currentUserId, isAdmin }: Props) 
                 onChange={(e) => setInviteRole(e.target.value)}
                 className="h-10 rounded-md bg-zinc-800/40 border border-zinc-700/40 text-zinc-200 text-sm px-3"
               >
-                <option value="admin">Admin</option>
+                <option value="admin">Administrador</option>
                 <option value="analyst">Analista</option>
-                <option value="viewer">Viewer</option>
+                <option value="viewer">Visualizador</option>
               </select>
               <Button
                 onClick={handleInvite}
@@ -220,9 +220,9 @@ export function TeamClient({ members, invites, currentUserId, isAdmin }: Props) 
                         onChange={(e) => handleRoleChange(member.id, e.target.value)}
                         className={`h-7 rounded-md border text-[11px] font-semibold px-2 ${roleColor}`}
                       >
-                        <option value="admin">Admin</option>
+                        <option value="admin">Administrador</option>
                         <option value="analyst">Analista</option>
-                        <option value="viewer">Viewer</option>
+                        <option value="viewer">Visualizador</option>
                       </select>
                     ) : (
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-semibold ${roleColor}`}>

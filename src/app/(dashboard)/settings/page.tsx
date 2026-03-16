@@ -226,7 +226,7 @@ export default function SettingsPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-xs text-zinc-500 uppercase tracking-wider font-medium">
-                  Max Tokens
+                  Max. Tokens
                 </Label>
                 <span className="text-xs font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">
                   {maxTokens.toLocaleString()}
@@ -249,7 +249,7 @@ export default function SettingsPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-xs text-zinc-500 uppercase tracking-wider font-medium">
-                  Temperature
+                  Temperatura
                 </Label>
                 <span className="text-xs font-mono text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-500/10">
                   {temperature.toFixed(1)}

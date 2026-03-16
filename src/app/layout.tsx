@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { SessionProvider } from "next-auth/react"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { ToastProvider } from "@/components/ui/toast"
 import "./globals.css"
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -60,13 +61,17 @@ export default function RootLayout({
     <html lang="pt-BR" className="dark">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="dns-prefetch" href="https://media.api-sports.io" />
+        <link rel="preconnect" href="https://media.api-sports.io" crossOrigin="anonymous" />
         <meta name="theme-color" content="#10b981" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased subpixel-antialiased`}>
         <SessionProvider>
-          <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+          <TooltipProvider delayDuration={300}>
+            <ToastProvider>{children}</ToastProvider>
+          </TooltipProvider>
         </SessionProvider>
               <Analytics />
         <SpeedInsights />

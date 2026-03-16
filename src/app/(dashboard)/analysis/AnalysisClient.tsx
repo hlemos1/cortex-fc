@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { VxRxScatter } from "@/components/cortex/VxRxScatter"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { UpgradePrompt } from "@/components/cortex/UpgradePrompt"
+import { EmptyState } from "@/components/ui/empty-state"
 import type { AnalysisUI } from "@/lib/db-transforms"
 import type { CortexDecision } from "@/types/cortex"
 
@@ -302,6 +303,22 @@ export function AnalysisClient({ analyses }: Props) {
               </tbody>
             </table>
           </div>
+          {filtered.length === 0 && analyses.length === 0 && (
+            <EmptyState
+              icon={Activity}
+              title="Nenhuma analise realizada"
+              description="Analise seu primeiro jogador para ver metricas neurais aqui"
+              actionLabel="Nova Analise"
+              actionHref="/analysis/new"
+            />
+          )}
+          {filtered.length === 0 && analyses.length > 0 && (
+            <EmptyState
+              icon={Filter}
+              title="Nenhuma analise encontrada"
+              description="Ajuste os filtros para ver resultados"
+            />
+          )}
         </CardContent>
       </Card>
     </div>

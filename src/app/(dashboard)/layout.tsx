@@ -29,6 +29,9 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { OrgSwitcher } from "@/components/cortex/OrgSwitcher"
 import { NotificationsDropdown } from "@/components/cortex/NotificationsDropdown"
+import { BottomNav } from "@/components/layout/bottom-nav"
+import { CommandPalette } from "@/components/ui/command-palette"
+import { Breadcrumb } from "@/components/ui/breadcrumb"
 import {
   Tooltip,
   TooltipContent,
@@ -214,6 +217,17 @@ export default function DashboardLayout({
               currentOrgId={session?.user?.orgId ?? ""}
               currentOrgName={session?.user?.orgName ?? "Carregando..."}
             />
+            <button
+              onClick={() => {
+                const ev = new KeyboardEvent("keydown", { key: "k", metaKey: true })
+                document.dispatchEvent(ev)
+              }}
+              className="hidden md:flex items-center gap-2 h-7 px-3 rounded-md bg-zinc-800/50 border border-zinc-700/40 text-xs text-zinc-500 hover:text-zinc-400 hover:border-zinc-600 transition-colors"
+            >
+              <Search className="w-3 h-3" />
+              <span>Buscar...</span>
+              <kbd className="ml-1 px-1 py-0.5 rounded bg-zinc-700/50 text-[10px] font-mono text-zinc-600">⌘K</kbd>
+            </button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -238,13 +252,20 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        {/* Page Content — with fade-in animation */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="animate-fade-in">
+        {/* Page Content — with page transition */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+          <Breadcrumb />
+          <div key={pathname} className="page-transition">
             {children}
           </div>
         </main>
       </div>
+
+      {/* Bottom Navigation — Mobile only */}
+      <BottomNav onMorePress={() => setMobileOpen(true)} />
+
+      {/* Command Palette — Cmd+K */}
+      <CommandPalette />
     </div>
   )
 }

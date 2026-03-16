@@ -59,7 +59,7 @@ export function NeuralRadar({ layers, playerName, scnScore, size = 300 }: Neural
           <p className="text-sm font-semibold text-zinc-200">{playerName}</p>
         </div>
       )}
-      <div className="relative" style={{ width: size, height: size }}>
+      <div className="relative w-full max-w-[220px] sm:max-w-none" style={{ width: size, height: size }}>
         {/* Center score overlay */}
         {scnScore !== undefined && (
           <div

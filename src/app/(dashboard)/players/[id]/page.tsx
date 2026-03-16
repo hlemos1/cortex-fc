@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import {
   User,
@@ -119,8 +120,21 @@ export default async function PlayerDetailPage({
         <div className="relative p-6 md:p-8">
           <div className="flex flex-col md:flex-row gap-6">
             {/* Photo placeholder */}
-            <div className="w-28 h-28 rounded-xl bg-zinc-800/80 flex items-center justify-center flex-shrink-0 border border-zinc-700/50 ring-2 ring-zinc-700/30 ring-offset-2 ring-offset-zinc-900">
-              <User className="w-14 h-14 text-zinc-600" />
+            <div className="w-28 h-28 rounded-xl bg-zinc-800/80 flex items-center justify-center flex-shrink-0 border border-zinc-700/50 ring-2 ring-zinc-700/30 ring-offset-2 ring-offset-zinc-900 overflow-hidden">
+              {player.photoUrl ? (
+                <Image
+                  src={player.photoUrl}
+                  alt={player.name}
+                  width={112}
+                  height={112}
+                  className="object-cover w-full h-full"
+                  priority
+                />
+              ) : (
+                <span className="text-2xl font-bold text-zinc-600">
+                  {player.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()}
+                </span>
+              )}
             </div>
 
             {/* Player info */}

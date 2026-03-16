@@ -12,12 +12,14 @@ import {
   Download,
   Share2,
   Bot,
+  Sparkles,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { UpgradePrompt } from "@/components/cortex/UpgradePrompt"
+import { EmptyState } from "@/components/ui/empty-state"
 import { getDecisionColor } from "@/lib/db-transforms"
 import type { AnalysisUI } from "@/lib/db-transforms"
 import type { CortexDecision } from "@/types/cortex"
@@ -348,11 +350,22 @@ export function ReportsClient({ analyses }: Props) {
 
       {filteredReports.length === 0 && (
         <Card className="bg-zinc-900/80 border-zinc-800 animate-fade-in">
-          <CardContent className="py-12 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-8 h-8 text-zinc-700" />
-            </div>
-            <p className="text-zinc-500">Nenhum relatorio encontrado com os filtros selecionados.</p>
+          <CardContent className="p-0">
+            {analyses.length === 0 ? (
+              <EmptyState
+                icon={FileText}
+                title="Nenhum relatorio gerado"
+                description="Gere seu primeiro relatorio neural a partir de uma analise"
+                actionLabel="Nova Analise"
+                actionHref="/analysis/new"
+              />
+            ) : (
+              <EmptyState
+                icon={Filter}
+                title="Nenhum relatorio encontrado"
+                description="Ajuste os filtros para ver resultados"
+              />
+            )}
           </CardContent>
         </Card>
       )}

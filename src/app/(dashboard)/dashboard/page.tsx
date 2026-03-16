@@ -1,8 +1,5 @@
 import {
-  Users,
   Activity,
-  Search,
-  TrendingUp,
   Cpu,
 } from "lucide-react"
 import Link from "next/link"
@@ -10,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { VxRxScatter } from "@/components/cortex/VxRxScatter"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
+import { StatCard } from "@/components/cortex/StatCard"
 import { getDashboardStats, getAnalyses, getPlayers } from "@/db/queries"
 import { toScatterPoint, toAlgorithmScores, formatDate } from "@/lib/db-transforms"
 import { AlertsPanel } from "../AlertsPanel"
@@ -82,7 +80,7 @@ export default async function DashboardPage() {
     {
       title: "Total Jogadores",
       value: stats.totalPlayers,
-      icon: Users,
+      iconName: "users" as const,
       change: "+2 este mes",
       color: "text-blue-400",
       bgColor: "bg-blue-500/10",
@@ -90,7 +88,7 @@ export default async function DashboardPage() {
     {
       title: "Analises Realizadas",
       value: stats.totalAnalyses,
-      icon: Activity,
+      iconName: "activity" as const,
       change: "+5 esta semana",
       color: "text-emerald-400",
       bgColor: "bg-emerald-500/10",
@@ -98,7 +96,7 @@ export default async function DashboardPage() {
     {
       title: "Alvos de Scouting",
       value: stats.scoutingTargets,
-      icon: Search,
+      iconName: "search" as const,
       change: "3 prioritarios",
       color: "text-amber-400",
       bgColor: "bg-amber-500/10",
@@ -106,7 +104,7 @@ export default async function DashboardPage() {
     {
       title: "Score Medio SCN+",
       value: stats.averageSCN,
-      icon: TrendingUp,
+      iconName: "trending" as const,
       change: "+3.2 vs mes anterior",
       color: "text-cyan-400",
       bgColor: "bg-cyan-500/10",
@@ -137,34 +135,21 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards — Animated Numbers */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsCards.map((stat, index) => {
-          const Icon = stat.icon
-          return (
-            <Card
-              key={stat.title}
-              className={`bg-zinc-900/80 border-zinc-800 border-l-[3px] ${borderColors[index]} card-hover animate-slide-up stagger-${index + 1}`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">
-                      {stat.title}
-                    </p>
-                    <p className="text-2xl font-bold text-zinc-100 mt-1 font-mono tracking-tight">
-                      {stat.value}
-                    </p>
-                    <p className="text-[11px] text-zinc-600 mt-1">{stat.change}</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-lg ${stat.bgColor} flex items-center justify-center ring-1 ring-white/5`}>
-                    <Icon className={`w-5 h-5 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+        {statsCards.map((stat, index) => (
+          <StatCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            iconName={stat.iconName}
+            change={stat.change}
+            color={stat.color}
+            bgColor={stat.bgColor}
+            borderColor={borderColors[index]}
+            delay={(index + 1) * 100}
+          />
+        ))}
       </div>
 
       {/* Main Content Grid */}

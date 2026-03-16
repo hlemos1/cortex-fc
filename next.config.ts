@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "**.vercel-storage.com" },
       { protocol: "https", hostname: "**.googleusercontent.com" },
+      { protocol: "https", hostname: "media.api-sports.io" },
+      { protocol: "https", hostname: "media-*.api-sports.io" },
     ],
   },
   headers: async () => [
@@ -18,6 +20,18 @@ const nextConfig: NextConfig = {
         { key: "X-DNS-Prefetch-Control", value: "on" },
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+      ],
+    },
+    {
+      source: "/api/football/:path*",
+      headers: [
+        { key: "Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=600" },
+      ],
+    },
+    {
+      source: "/api/players/search-external",
+      headers: [
+        { key: "Cache-Control", value: "public, s-maxage=120, stale-while-revalidate=300" },
       ],
     },
   ],

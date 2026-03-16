@@ -1,13 +1,19 @@
 /**
- * API-Football (RapidAPI) service layer.
+ * API-Football service layer.
  *
  * Docs: https://www.api-football.com/documentation-v3
  * Free tier: 100 requests/day
  *
- * Requires: RAPIDAPI_KEY env var
+ * Requires: API_FOOTBALL_KEY env var (or legacy RAPIDAPI_KEY)
  */
 
 const BASE_URL = "https://v3.football.api-sports.io";
+
+function getApiKey(): string {
+  const key = process.env.API_FOOTBALL_KEY || process.env.RAPIDAPI_KEY;
+  if (!key) throw new Error("API_FOOTBALL_KEY not configured");
+  return key;
+}
 
 interface ApiFootballResponse<T> {
   get: string;
@@ -19,10 +25,7 @@ interface ApiFootballResponse<T> {
 }
 
 async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}): Promise<T[]> {
-  const apiKey = process.env.RAPIDAPI_KEY;
-  if (!apiKey) {
-    throw new Error("RAPIDAPI_KEY not configured");
-  }
+  const apiKey = getApiKey();
 
   const url = new URL(`${BASE_URL}/${endpoint}`);
   for (const [key, value] of Object.entries(params)) {
@@ -31,8 +34,7 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
 
   const res = await fetch(url.toString(), {
     headers: {
-      "x-rapidapi-key": apiKey,
-      "x-rapidapi-host": "v3.football.api-sports.io",
+      "x-apisports-key": apiKey,
     },
     next: { revalidate: 3600 }, // cache 1h
   });
@@ -48,6 +50,42 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string> = {}
   }
 
   return data.response;
+}
+
+// ============================================
+// Helper to get full paginated response (with paging metadata)
+// ============================================
+
+async function apiFetchWithPaging<T>(endpoint: string, params: Record<string, string> = {}): Promise<{
+  response: T[];
+  paging: { current: number; total: number };
+  results: number;
+}> {
+  const apiKey = getApiKey();
+
+  const url = new URL(`${BASE_URL}/${endpoint}`);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      "x-apisports-key": apiKey,
+    },
+    next: { revalidate: 3600 },
+  });
+
+  if (!res.ok) {
+    throw new Error(`API-Football error: ${res.status} ${res.statusText}`);
+  }
+
+  const data: ApiFootballResponse<T> = await res.json();
+
+  if (data.errors && Object.keys(data.errors).length > 0) {
+    throw new Error(`API-Football errors: ${JSON.stringify(data.errors)}`);
+  }
+
+  return { response: data.response, paging: data.paging, results: data.results };
 }
 
 // ============================================
@@ -268,6 +306,107 @@ export async function getPlayerSeasonStats(params: {
  */
 export async function getTransfers(playerId: number): Promise<ApiTransfer[]> {
   return apiFetch<ApiTransfer>("transfers", { player: String(playerId) });
+}
+
+// ============================================
+// WORLDWIDE SEARCH & DISCOVERY
+// ============================================
+
+export interface ApiCountry {
+  name: string;
+  code: string | null;
+  flag: string | null;
+}
+
+export interface ApiLeague {
+  league: {
+    id: number;
+    name: string;
+    type: string; // "League" | "Cup"
+    logo: string;
+  };
+  country: {
+    name: string;
+    code: string | null;
+    flag: string | null;
+  };
+  seasons: Array<{
+    year: number;
+    current: boolean;
+  }>;
+}
+
+export interface ApiSquadPlayer {
+  id: number;
+  name: string;
+  age: number;
+  number: number | null;
+  position: string;
+  photo: string;
+}
+
+/**
+ * List all available countries
+ */
+export async function getCountries(): Promise<ApiCountry[]> {
+  return apiFetch<ApiCountry>("countries");
+}
+
+/**
+ * List leagues by country (or all)
+ */
+export async function getLeagues(params?: {
+  country?: string;
+  season?: number;
+  search?: string;
+  id?: number;
+}): Promise<ApiLeague[]> {
+  const query: Record<string, string> = {};
+  if (params?.country) query.country = params.country;
+  if (params?.season) query.season = String(params.season);
+  if (params?.search) query.search = params.search;
+  if (params?.id) query.id = String(params.id);
+  return apiFetch<ApiLeague>("leagues", query);
+}
+
+/**
+ * Search players by name (requires league + season)
+ */
+export async function searchPlayersByName(params: {
+  search: string;
+  league: number;
+  season: number;
+  page?: number;
+}): Promise<{ players: ApiPlayer[]; paging: { current: number; total: number }; results: number }> {
+  const result = await apiFetchWithPaging<ApiPlayer>("players", {
+    search: params.search,
+    league: String(params.league),
+    season: String(params.season),
+    ...(params.page && { page: String(params.page) }),
+  });
+  return { players: result.response, paging: result.paging, results: result.results };
+}
+
+/**
+ * Get player profile + stats by API-Football player ID
+ */
+export async function getPlayerProfile(playerId: number, season: number): Promise<ApiPlayer | null> {
+  const data = await apiFetch<ApiPlayer>("players", {
+    id: String(playerId),
+    season: String(season),
+  });
+  return data[0] ?? null;
+}
+
+/**
+ * Get squad (current roster) of a team — lightweight, no stats
+ */
+export async function getTeamSquad(teamId: number): Promise<{ team: { id: number; name: string; logo: string }; players: ApiSquadPlayer[] } | null> {
+  const data = await apiFetch<{ team: { id: number; name: string; logo: string }; players: ApiSquadPlayer[] }>(
+    "players/squads",
+    { team: String(teamId) }
+  );
+  return data[0] ?? null;
 }
 
 /**
