@@ -13,17 +13,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
-interface Notification {
-  id: string
-  type: string
-  title: string
-  body: string | null
-  entityType: string | null
-  entityId: string | null
-  readAt: string | null
-  createdAt: string
-}
+import { useNotifications } from "@/hooks/useNotifications"
 
 const TYPE_CONFIG: Record<string, { icon: typeof Bell; color: string }> = {
   contract_alert: { icon: AlertTriangle, color: "text-amber-400" },
@@ -36,35 +26,8 @@ const TYPE_CONFIG: Record<string, { icon: typeof Bell; color: string }> = {
 
 export function NotificationsDropdown() {
   const [open, setOpen] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
-
-  // Fetch unread count
-  useEffect(() => {
-    fetch("/api/notifications?count=true")
-      .then((r) => r.json())
-      .then((json) => setUnreadCount(json.data?.unread ?? 0))
-      .catch(() => {})
-
-    const interval = setInterval(() => {
-      fetch("/api/notifications?count=true")
-        .then((r) => r.json())
-        .then((json) => setUnreadCount(json.data?.unread ?? 0))
-        .catch(() => {})
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  // Fetch notifications when opened
-  useEffect(() => {
-    if (!open) return
-    fetch("/api/notifications")
-      .then((r) => r.json())
-      .then((json) => setNotifications(json.data ?? []))
-      .catch(() => {})
-  }, [open])
+  const { notifications, unreadCount, markAsRead, markAllRead, isConnected } = useNotifications()
 
   // Close on click outside
   useEffect(() => {
@@ -76,28 +39,6 @@ export function NotificationsDropdown() {
     document.addEventListener("mousedown", handleClick)
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
-
-  async function markRead(id: string) {
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    })
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
-    )
-    setUnreadCount((c) => Math.max(0, c - 1))
-  }
-
-  async function markAllRead() {
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ all: true }),
-    })
-    setNotifications((prev) => prev.map((n) => ({ ...n, readAt: new Date().toISOString() })))
-    setUnreadCount(0)
-  }
 
   function formatTime(iso: string) {
     const d = new Date(iso)
@@ -121,6 +62,13 @@ export function NotificationsDropdown() {
         onClick={() => setOpen(!open)}
       >
         <Bell className="w-4 h-4" />
+        {/* SSE connection indicator */}
+        <span
+          className={cn(
+            "absolute top-0 left-0 w-1.5 h-1.5 rounded-full",
+            isConnected ? "bg-emerald-500" : "bg-red-500"
+          )}
+        />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-[9px] font-bold text-white flex items-center justify-center animate-pulse">
             {unreadCount > 9 ? "9+" : unreadCount}
@@ -159,7 +107,7 @@ export function NotificationsDropdown() {
                 return (
                   <button
                     key={n.id}
-                    onClick={() => isUnread && markRead(n.id)}
+                    onClick={() => isUnread && markAsRead(n.id)}
                     className={cn(
                       "w-full text-left px-4 py-3 flex gap-3 hover:bg-zinc-800/50 transition-colors border-b border-zinc-800/30",
                       isUnread && "bg-emerald-500/[0.03]"

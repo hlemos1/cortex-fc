@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { ExternalPlayerSearch } from "@/components/players/ExternalPlayerSearch"
 import { EmptyState } from "@/components/ui/empty-state"
+import { EmptyStateCTA } from "@/components/cortex/EmptyStateCTA"
 import { PlayerAvatar } from "@/components/ui/player-avatar"
 import type { CortexDecision } from "@/types/cortex"
 
@@ -232,12 +233,12 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
           </Link>
         ))}
         {filtered.length === 0 && players.length === 0 && (
-          <EmptyState
-            icon={Globe}
-            title="Nenhum jogador registrado"
-            description="Importe jogadores do banco mundial para comecar suas analises"
-            actionLabel="Buscar Jogador Mundial"
-            onAction={() => {}}
+          <EmptyStateCTA
+            icon={<Users className="w-6 h-6" />}
+            title="Nenhum jogador na base"
+            description="Importe jogadores do banco mundial ou explore ligas e times."
+            primaryAction={{ label: "Importar Jogadores", href: "/players" }}
+            secondaryAction={{ label: "Explorar Ligas", href: "/players/explore" }}
           />
         )}
         {filtered.length === 0 && players.length > 0 && (
@@ -335,12 +336,12 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
             </table>
           </div>
           {filtered.length === 0 && players.length === 0 && (
-            <EmptyState
-              icon={Globe}
-              title="Nenhum jogador registrado"
-              description="Importe jogadores do banco mundial para comecar suas analises"
-              actionLabel="Buscar Jogador Mundial"
-              onAction={() => {}}
+            <EmptyStateCTA
+              icon={<Users className="w-6 h-6" />}
+              title="Nenhum jogador na base"
+              description="Importe jogadores do banco mundial ou explore ligas e times."
+              primaryAction={{ label: "Importar Jogadores", href: "/players" }}
+              secondaryAction={{ label: "Explorar Ligas", href: "/players/explore" }}
             />
           )}
           {filtered.length === 0 && players.length > 0 && (

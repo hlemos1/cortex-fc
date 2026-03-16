@@ -14,15 +14,41 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [orgName, setOrgName] = useState("");
   const [orgType, setOrgType] = useState<string>("");
   const [inviteEmails, setInviteEmails] = useState("");
 
   const handleFinish = async () => {
     setLoading(true);
-    // TODO: save org name, type, send invites via API
-    await new Promise((r) => setTimeout(r, 500));
-    router.push("/dashboard");
+    setError("");
+
+    try {
+      const emails = inviteEmails
+        .split("\n")
+        .map((e) => e.trim())
+        .filter((e) => e.length > 0);
+
+      const res = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orgName: orgName.trim(),
+          orgType: orgType || "other",
+          inviteEmails: emails.length > 0 ? emails : undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Erro ao completar onboarding");
+      }
+
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao completar onboarding");
+      setLoading(false);
+    }
   };
 
   return (
@@ -155,6 +181,11 @@ export default function OnboardingPage() {
                 />
                 <p className="text-xs text-zinc-600 mt-1">Convites serao enviados como &quot;Analista&quot; (podem ser promovidos depois)</p>
               </div>
+              {error && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <p className="text-xs text-red-400">{error}</p>
+                </div>
+              )}
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(2)}
@@ -174,15 +205,7 @@ export default function OnboardingPage() {
           )}
         </div>
 
-        {/* Skip */}
-        {step < 3 && (
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="block mx-auto mt-4 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
-          >
-            Pular configuracao
-          </button>
-        )}
+        {/* Skip — removed to enforce onboarding */}
       </div>
     </div>
   );

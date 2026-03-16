@@ -7,6 +7,7 @@
 
 import { inngest } from "@/lib/inngest-client";
 import { invalidateCache, invalidateCachePrefix, CACHE_KEYS } from "@/lib/cache";
+import { createNotification } from "@/db/queries";
 
 // ============================================
 // 1. Cache invalidation on analysis creation
@@ -16,7 +17,7 @@ export const onAnalysisCreated = inngest.createFunction(
   { id: "on-analysis-created", name: "Invalidate cache + notify on analysis" },
   { event: "cortex/analysis.created" },
   async ({ event, step }) => {
-    const { orgId, analysisId, playerName } = event.data;
+    const { orgId, userId, analysisId, playerName } = event.data;
 
     // Step 1: Invalidate caches
     await step.run("invalidate-caches", async () => {
@@ -35,6 +36,23 @@ export const onAnalysisCreated = inngest.createFunction(
       });
     });
 
+    // Step 3: Create in-app notification
+    await step.run("create-notification", async () => {
+      try {
+        await createNotification({
+          orgId,
+          userId,
+          type: "analysis_complete",
+          title: "Analise concluida",
+          body: `Analise neural de ${playerName} finalizada.`,
+          entityType: "analysis",
+          entityId: analysisId,
+        });
+      } catch (err) {
+        console.error("Failed to create analysis notification:", err);
+      }
+    });
+
     return { success: true };
   }
 );
@@ -47,7 +65,7 @@ export const onAgentCompleted = inngest.createFunction(
   { id: "on-agent-completed", name: "Post-agent-run tasks" },
   { event: "cortex/agent.completed" },
   async ({ event, step }) => {
-    const { orgId, agentType, runId } = event.data;
+    const { orgId, userId, agentType, runId } = event.data;
 
     await step.run("invalidate-agent-metrics", async () => {
       await invalidateCache(CACHE_KEYS.agentMetrics(orgId));
@@ -59,6 +77,23 @@ export const onAgentCompleted = inngest.createFunction(
         agentType,
         runId,
       });
+    });
+
+    // Create in-app notification
+    await step.run("create-notification", async () => {
+      try {
+        await createNotification({
+          orgId,
+          userId,
+          type: "agent_complete",
+          title: "Agente IA concluido",
+          body: `Agente ${agentType} finalizou execucao.`,
+          entityType: "agent",
+          entityId: runId,
+        });
+      } catch (err) {
+        console.error("Failed to create agent notification:", err);
+      }
     });
 
     return { success: true };
@@ -73,7 +108,7 @@ export const onReportGenerated = inngest.createFunction(
   { id: "on-report-generated", name: "Notify on report generation" },
   { event: "cortex/report.generated" },
   async ({ event, step }) => {
-    const { orgId, reportId, analysisId } = event.data;
+    const { orgId, userId, reportId, analysisId } = event.data;
 
     await step.run("dispatch-webhook", async () => {
       const { dispatchWebhook } = await import("@/lib/webhook-dispatch");
@@ -81,6 +116,23 @@ export const onReportGenerated = inngest.createFunction(
         reportId,
         analysisId,
       });
+    });
+
+    // Create in-app notification
+    await step.run("create-notification", async () => {
+      try {
+        await createNotification({
+          orgId,
+          userId,
+          type: "report_generated",
+          title: "Relatorio gerado",
+          body: "Novo relatorio disponivel.",
+          entityType: "report",
+          entityId: reportId,
+        });
+      } catch (err) {
+        console.error("Failed to create report notification:", err);
+      }
     });
 
     return { success: true };
@@ -95,7 +147,7 @@ export const onScoutingTargetAdded = inngest.createFunction(
   { id: "on-scouting-target-added", name: "Post-scouting tasks" },
   { event: "cortex/scouting.target.added" },
   async ({ event, step }) => {
-    const { orgId, targetId, playerName } = event.data;
+    const { orgId, userId, targetId, playerName } = event.data;
 
     await step.run("invalidate-caches", async () => {
       await Promise.all([
@@ -110,6 +162,23 @@ export const onScoutingTargetAdded = inngest.createFunction(
         targetId,
         playerName,
       });
+    });
+
+    // Create in-app notification
+    await step.run("create-notification", async () => {
+      try {
+        await createNotification({
+          orgId,
+          userId,
+          type: "scouting_update",
+          title: "Novo alvo de scouting",
+          body: `${playerName} adicionado ao pipeline.`,
+          entityType: "scouting",
+          entityId: targetId,
+        });
+      } catch (err) {
+        console.error("Failed to create scouting notification:", err);
+      }
     });
 
     return { success: true };

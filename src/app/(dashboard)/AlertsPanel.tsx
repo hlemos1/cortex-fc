@@ -29,7 +29,7 @@ function getSeverityIcon(severity: string) {
 
 export function AlertsPanel({ alerts }: { alerts: Alert[] }) {
   return (
-    <Card className="bg-zinc-900/80 border-zinc-800 glass">
+    <Card data-tour="alerts-panel" className="bg-zinc-900/80 border-zinc-800 glass">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center ring-1 ring-amber-500/20">

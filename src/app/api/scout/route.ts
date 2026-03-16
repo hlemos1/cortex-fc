@@ -4,6 +4,7 @@ import { canUseAgent } from "@/lib/feature-gates";
 import { runScout } from "@/lib/agents/scout-agent";
 import { createAgentRun } from "@/db/queries";
 import type { ScoutInput } from "@/types/cortex";
+import { inngest } from "@/lib/inngest-client";
 
 const VALID_POSITIONS = ["GK", "CB", "FB", "DM", "CM", "AM", "W", "ST"];
 
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     const result = await runScout(input);
 
     // Log agent run
-    await createAgentRun({
+    const agentRun = await createAgentRun({
       agentType: "SCOUT",
       inputContext: input as unknown as Record<string, unknown>,
       outputResult: result as unknown as Record<string, unknown>,
@@ -58,7 +59,22 @@ export async function POST(request: Request) {
       success: true,
       userId: session!.userId,
       orgId: session!.orgId,
-    }).catch(() => {});
+    }).catch(() => null);
+
+    // Emit event for background processing (notifications, cache invalidation, webhooks)
+    try {
+      await inngest.send({
+        name: "cortex/agent.completed",
+        data: {
+          agentType: "SCOUT",
+          orgId: session!.orgId,
+          userId: session!.userId,
+          runId: agentRun?.id ?? "",
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send agent.completed event:", err);
+    }
 
     return NextResponse.json({ data: result });
   } catch (error) {

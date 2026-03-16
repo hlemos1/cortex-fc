@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { UpgradePrompt } from "@/components/cortex/UpgradePrompt"
 import { EmptyState } from "@/components/ui/empty-state"
+import { EmptyStateCTA } from "@/components/cortex/EmptyStateCTA"
 import { getDecisionColor } from "@/lib/db-transforms"
 import type { AnalysisUI } from "@/lib/db-transforms"
 import type { CortexDecision } from "@/types/cortex"
@@ -352,12 +353,11 @@ export function ReportsClient({ analyses }: Props) {
         <Card className="bg-zinc-900/80 border-zinc-800 animate-fade-in">
           <CardContent className="p-0">
             {analyses.length === 0 ? (
-              <EmptyState
-                icon={FileText}
+              <EmptyStateCTA
+                icon={<FileText className="w-6 h-6" />}
                 title="Nenhum relatorio gerado"
-                description="Gere seu primeiro relatorio neural a partir de uma analise"
-                actionLabel="Nova Analise"
-                actionHref="/analysis/new"
+                description="Gere pareceres neurais completos em PDF para seus jogadores."
+                primaryAction={{ label: "Gerar Relatorio", href: "/reports" }}
               />
             ) : (
               <EmptyState

@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/rbac";
 import { checkRateLimit, aiRateLimit } from "@/lib/rate-limit";
 import { createAgentRun } from "@/db/queries";
 import { canUseAgent } from "@/lib/feature-gates";
+import { inngest } from "@/lib/inngest-client";
 
 export async function POST(req: Request) {
   try {
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
 
     const durationMs = Date.now() - startTime;
 
-    await createAgentRun({
+    const agentRun = await createAgentRun({
       agentType: "BOARD_ADVISOR",
       inputContext,
       outputResult: result as unknown as Record<string, unknown>,
@@ -104,7 +105,23 @@ export async function POST(req: Request) {
       orgId: session!.orgId,
     }).catch((err) => {
       console.error("Failed to log agent run:", err);
+      return null;
     });
+
+    // Emit event for background processing (notifications, cache invalidation, webhooks)
+    try {
+      await inngest.send({
+        name: "cortex/agent.completed",
+        data: {
+          agentType: "BOARD_ADVISOR",
+          orgId: session!.orgId,
+          userId: session!.userId,
+          runId: agentRun?.id ?? "",
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send agent.completed event:", err);
+    }
 
     return NextResponse.json({ data: result });
   } catch (error) {

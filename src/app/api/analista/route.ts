@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/rbac";
 import { runAnalista } from "@/lib/agents/analista-agent";
 import { createAgentRun } from "@/db/queries";
 import type { AnalistaInput } from "@/types/cortex";
+import { inngest } from "@/lib/inngest-client";
 
 export async function POST(request: Request) {
   try {
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
     const durationMs = Date.now() - start;
 
     // Log agent run
-    await createAgentRun({
+    const agentRun = await createAgentRun({
       agentType: "ANALISTA",
       inputContext: input as unknown as Record<string, unknown>,
       outputResult: result as unknown as Record<string, unknown>,
@@ -58,7 +59,22 @@ export async function POST(request: Request) {
       success: true,
       userId: session!.userId,
       orgId: session!.orgId,
-    }).catch(() => {});
+    }).catch(() => null);
+
+    // Emit event for background processing (notifications, cache invalidation, webhooks)
+    try {
+      await inngest.send({
+        name: "cortex/agent.completed",
+        data: {
+          agentType: "ANALISTA",
+          orgId: session!.orgId,
+          userId: session!.userId,
+          runId: agentRun?.id ?? "",
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send agent.completed event:", err);
+    }
 
     return NextResponse.json({ data: result });
   } catch (error) {

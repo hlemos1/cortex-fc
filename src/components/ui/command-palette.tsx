@@ -18,6 +18,7 @@ import {
   Plus,
   Command,
 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 
 interface CommandItem {
@@ -31,23 +32,19 @@ interface CommandItem {
   action?: () => void
 }
 
-const PAGES: CommandItem[] = [
-  { id: "dashboard", label: "Dashboard", description: "Visao geral", icon: <LayoutDashboard className="w-4 h-4" />, href: "/dashboard", group: "Paginas" },
-  { id: "players", label: "Jogadores", description: "Base de dados", icon: <Users className="w-4 h-4" />, href: "/players", group: "Paginas" },
-  { id: "analysis", label: "Analises", description: "Resultados neurais", icon: <Activity className="w-4 h-4" />, href: "/analysis", group: "Paginas" },
-  { id: "scouting", label: "Scouting", description: "Pipeline de alvos", icon: <Search className="w-4 h-4" />, href: "/scouting", group: "Paginas" },
-  { id: "reports", label: "Relatorios", description: "Pareceres e PDFs", icon: <FileText className="w-4 h-4" />, href: "/reports", group: "Paginas" },
-  { id: "chat", label: "Chat IA", description: "Assistente neural", icon: <MessageSquare className="w-4 h-4" />, href: "/chat", group: "Paginas" },
-  { id: "simulator", label: "Simulador", description: "Cenarios de transferencia", icon: <ArrowRightLeft className="w-4 h-4" />, href: "/simulator", group: "Paginas" },
-  { id: "agent-console", label: "Console IA", description: "Agentes autonomos", icon: <Monitor className="w-4 h-4" />, href: "/agent-console", group: "Paginas" },
-  { id: "holding", label: "Holding", description: "Multi-organizacao", icon: <Building2 className="w-4 h-4" />, href: "/holding", group: "Paginas" },
-  { id: "audit-log", label: "Audit Log", description: "Historico de acoes", icon: <Shield className="w-4 h-4" />, href: "/audit-log", group: "Paginas" },
-  { id: "billing", label: "Assinatura", description: "Planos e pagamento", icon: <CreditCard className="w-4 h-4" />, href: "/billing", group: "Paginas" },
-  { id: "settings", label: "Configuracoes", description: "IA, API, notificacoes", icon: <Settings className="w-4 h-4" />, href: "/settings", group: "Paginas" },
-]
-
-const ACTIONS: CommandItem[] = [
-  { id: "new-analysis", label: "Nova Analise", description: "Cmd+N", icon: <Plus className="w-4 h-4" />, href: "/analysis/new", shortcut: "N", group: "Acoes" },
+const PAGE_DEFS = [
+  { id: "dashboard", navKey: "dashboard" as const, descKey: "dashboardDesc" as const, icon: <LayoutDashboard className="w-4 h-4" />, href: "/dashboard" },
+  { id: "players", navKey: "players" as const, descKey: "playersDesc" as const, icon: <Users className="w-4 h-4" />, href: "/players" },
+  { id: "analysis", navKey: "analysis" as const, descKey: "analysisDesc" as const, icon: <Activity className="w-4 h-4" />, href: "/analysis" },
+  { id: "scouting", navKey: "scouting" as const, descKey: "scoutingDesc" as const, icon: <Search className="w-4 h-4" />, href: "/scouting" },
+  { id: "reports", navKey: "reports" as const, descKey: "reportsDesc" as const, icon: <FileText className="w-4 h-4" />, href: "/reports" },
+  { id: "chat", navKey: "chat" as const, descKey: "chatDesc" as const, icon: <MessageSquare className="w-4 h-4" />, href: "/chat" },
+  { id: "simulator", navKey: "simulator" as const, descKey: "simulatorDesc" as const, icon: <ArrowRightLeft className="w-4 h-4" />, href: "/simulator" },
+  { id: "agent-console", navKey: "agentConsole" as const, descKey: "agentConsoleDesc" as const, icon: <Monitor className="w-4 h-4" />, href: "/agent-console" },
+  { id: "holding", navKey: "holding" as const, descKey: "holdingDesc" as const, icon: <Building2 className="w-4 h-4" />, href: "/holding" },
+  { id: "audit-log", navKey: "auditLog" as const, descKey: "auditLogDesc" as const, icon: <Shield className="w-4 h-4" />, href: "/audit-log" },
+  { id: "billing", navKey: "billing" as const, descKey: "billingDesc" as const, icon: <CreditCard className="w-4 h-4" />, href: "/billing" },
+  { id: "settings", navKey: "settings" as const, descKey: "settingsDesc" as const, icon: <Settings className="w-4 h-4" />, href: "/settings" },
 ]
 
 export function CommandPalette() {
@@ -57,6 +54,24 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const t = useTranslations("nav")
+  const tc = useTranslations("common")
+
+  const pagesGroup = tc("pages")
+  const actionsGroup = tc("actions")
+
+  const PAGES: CommandItem[] = PAGE_DEFS.map((def) => ({
+    id: def.id,
+    label: t(def.navKey),
+    description: t(def.descKey),
+    icon: def.icon,
+    href: def.href,
+    group: pagesGroup,
+  }))
+
+  const ACTIONS: CommandItem[] = [
+    { id: "new-analysis", label: t("newAnalysis"), description: "Cmd+N", icon: <Plus className="w-4 h-4" />, href: "/analysis/new", shortcut: "N", group: actionsGroup },
+  ]
 
   const allItems = [...ACTIONS, ...PAGES]
 
@@ -155,7 +170,7 @@ export function CommandPalette() {
 
       {/* Palette */}
       <div className="fixed inset-x-0 top-[15%] z-[201] flex justify-center px-4 animate-scale-in">
-        <div role="dialog" aria-modal="true" aria-label="Busca rapida" className="w-full max-w-lg bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl shadow-black/50 overflow-hidden">
+        <div role="dialog" aria-modal="true" aria-label={tc("quickSearch")} className="w-full max-w-lg bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl shadow-black/50 overflow-hidden">
           {/* Search input */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800">
             <Command className="w-4 h-4 text-zinc-500 flex-shrink-0" />
@@ -164,7 +179,7 @@ export function CommandPalette() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar pagina, acao ou jogador..."
+              placeholder={tc("searchPlaceholder")}
               className="flex-1 bg-transparent text-sm text-zinc-200 placeholder-zinc-600 outline-none"
             />
             <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-500 font-mono border border-zinc-700/50">
@@ -176,7 +191,7 @@ export function CommandPalette() {
           <div ref={listRef} className="max-h-[360px] overflow-y-auto py-2">
             {filtered.length === 0 && (
               <div className="px-4 py-8 text-center text-zinc-600 text-sm">
-                Nenhum resultado para &ldquo;{query}&rdquo;
+                {tc("noResultsFor", { query })}
               </div>
             )}
 
@@ -234,15 +249,15 @@ export function CommandPalette() {
           <div className="flex items-center gap-4 px-4 py-2 border-t border-zinc-800 text-[10px] text-zinc-600">
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 rounded bg-zinc-800 font-mono border border-zinc-700/50">↑↓</kbd>
-              Navegar
+              {tc("navigate")}
             </span>
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 rounded bg-zinc-800 font-mono border border-zinc-700/50">Enter</kbd>
-              Selecionar
+              {tc("select")}
             </span>
             <span className="flex items-center gap-1">
               <kbd className="px-1 py-0.5 rounded bg-zinc-800 font-mono border border-zinc-700/50">Esc</kbd>
-              Fechar
+              {tc("close")}
             </span>
           </div>
         </div>

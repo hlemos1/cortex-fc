@@ -99,7 +99,7 @@ export default function RegisterPage() {
         setError("Conta criada, mas erro ao fazer login. Tente fazer login manualmente.")
         setLoading(false)
       } else {
-        router.push("/dashboard")
+        router.push("/onboarding")
       }
     } catch {
       setError("Erro ao criar conta. Tente novamente.")
@@ -303,7 +303,7 @@ export default function RegisterPage() {
           {/* Google Sign Up */}
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
             className="w-full flex items-center justify-center gap-3 bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/80 text-zinc-300 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">

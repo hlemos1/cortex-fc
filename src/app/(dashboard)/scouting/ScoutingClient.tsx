@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { NeuralRadar } from "@/components/cortex/NeuralRadar"
+import { EmptyStateCTA } from "@/components/cortex/EmptyStateCTA"
 import type { ScoutingPlayerUI } from "@/lib/db-transforms"
 import type { CortexDecision } from "@/types/cortex"
 
@@ -693,7 +694,12 @@ export function ScoutingClient({ scoutingTargets, initialTargets }: Props) {
                 </table>
               </div>
               {filtered.length === 0 && (
-                <div className="py-12 text-center text-zinc-600 text-sm">Nenhum alvo encontrado com os filtros atuais.</div>
+                <EmptyStateCTA
+                  icon={<Search className="w-6 h-6" />}
+                  title="Pipeline vazio"
+                  description="Adicione alvos de scouting para acompanhar jogadores de interesse."
+                  primaryAction={{ label: "Adicionar Alvo", href: "/scouting" }}
+                />
               )}
             </CardContent>
           </Card>

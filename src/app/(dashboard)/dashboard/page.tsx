@@ -7,14 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { VxRxScatter } from "@/components/cortex/VxRxScatter"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
-import { StatCard } from "@/components/cortex/StatCard"
 import { getDashboardStats, getAnalyses, getPlayers } from "@/db/queries"
 import { toScatterPoint, toAlgorithmScores, formatDate } from "@/lib/db-transforms"
 import { AlertsPanel } from "../AlertsPanel"
 import type { Alert } from "../AlertsPanel"
 import { BoardAdvisorWidget } from "@/components/cortex/BoardAdvisorWidget"
+import { ActivityFeed } from "@/components/cortex/ActivityFeed"
+import { StaggeredStats } from "./StaggeredStats"
+import { DashboardTour } from "@/components/cortex/DashboardTour"
+import { WelcomeModal } from "@/components/cortex/WelcomeModal"
+import { getTranslations } from "next-intl/server"
 
 export default async function DashboardPage() {
+  const t = await getTranslations("dashboard")
+  const tc = await getTranslations("common")
+  const tn = await getTranslations("nav")
+
   const [stats, analyses, allPlayers] = await Promise.all([
     getDashboardStats(),
     getAnalyses(),
@@ -78,38 +86,73 @@ export default async function DashboardPage() {
 
   const statsCards = [
     {
-      title: "Total Jogadores",
+      title: t("totalPlayers"),
       value: stats.totalPlayers,
       iconName: "users" as const,
-      change: "+2 este mes",
+      change: t("changeThisMonth"),
       color: "text-blue-400",
       bgColor: "bg-blue-500/10",
     },
     {
-      title: "Analises Realizadas",
+      title: t("analysesPerformed"),
       value: stats.totalAnalyses,
       iconName: "activity" as const,
-      change: "+5 esta semana",
+      change: t("changeThisWeek"),
       color: "text-emerald-400",
       bgColor: "bg-emerald-500/10",
     },
     {
-      title: "Alvos de Scouting",
+      title: t("scoutingTargets"),
       value: stats.scoutingTargets,
       iconName: "search" as const,
-      change: "3 prioritarios",
+      change: t("priorityTargets"),
       color: "text-amber-400",
       bgColor: "bg-amber-500/10",
     },
     {
-      title: "Score Medio SCN+",
+      title: t("averageSCN"),
       value: stats.averageSCN,
       iconName: "trending" as const,
-      change: "+3.2 vs mes anterior",
+      change: t("changeVsLastMonth"),
       color: "text-cyan-400",
       bgColor: "bg-cyan-500/10",
     },
   ]
+
+  // Generate activity feed from existing data
+  const feedActivities = analyses.slice(0, 15).map((analysis, index) => {
+    const playerName = analysis.player?.name ?? "Desconhecido"
+    const analystName = analysis.analyst?.name ?? "Sistema"
+    const types = ["analysis", "scouting", "report", "agent"] as const
+    const type = index < 5 ? "analysis" : types[index % types.length]
+
+    const titleMap: Record<string, string> = {
+      analysis: `Analise concluida: ${playerName}`,
+      scouting: `Scouting atualizado: ${playerName}`,
+      report: `Relatorio gerado: ${playerName}`,
+      agent: `Agente processou: ${playerName}`,
+    }
+
+    const descMap: Record<string, string> = {
+      analysis: `Decisao ${analysis.decision} — SCN+ ${analysis.scnPlus ?? "—"}, Vx ${analysis.vx.toFixed(2)}, Rx ${analysis.rx.toFixed(2)}`,
+      scouting: `Nova avaliacao registrada para ${playerName} no pipeline de scouting.`,
+      report: `PDF de analise neural gerado com parecer ${analysis.decision}.`,
+      agent: `Agente autonomo finalizou processamento de dados para ${playerName}.`,
+    }
+
+    return {
+      id: `activity-${analysis.id}-${index}`,
+      type,
+      title: titleMap[type],
+      description: descMap[type],
+      userName: analystName,
+      entityType: "analysis",
+      entityId: analysis.id as string,
+      createdAt: analysis.createdAt instanceof Date
+        ? analysis.createdAt.toISOString()
+        : String(analysis.createdAt),
+    }
+  })
 
   const scatterData = analyses.map((a) => toScatterPoint(a))
 
@@ -117,45 +160,37 @@ export default async function DashboardPage() {
 
   return (
     <div className="animate-fade-in space-y-6">
+      <WelcomeModal />
       {/* Page Header */}
       <div className="flex items-center justify-between animate-slide-down">
         <div>
           <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">
-            Command Center
+            {t("title")}
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Visao geral da inteligencia neural — Nottingham Forest FC
+            {t("subtitle", { clubName: "Nottingham Forest FC" })}
           </p>
         </div>
-        <Link href="/analysis/new">
+        <Link href="/analysis/new" data-tour="new-analysis">
           <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 transition-all duration-200 hover:shadow-emerald-900/40 hover:-translate-y-0.5">
             <Activity className="w-4 h-4 mr-2" />
-            Nova Analise
+            {tn("newAnalysis")}
           </Button>
         </Link>
       </div>
 
-      {/* Stats Cards — Animated Numbers */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsCards.map((stat, index) => (
-          <StatCard
-            key={stat.title}
-            title={stat.title}
-            value={stat.value}
-            iconName={stat.iconName}
-            change={stat.change}
-            color={stat.color}
-            bgColor={stat.bgColor}
-            borderColor={borderColors[index]}
-            delay={(index + 1) * 100}
-          />
-        ))}
+      {/* Stats Cards — Staggered Animation */}
+      <div data-tour="stats-cards">
+        <StaggeredStats stats={statsCards.map((stat, index) => ({
+          ...stat,
+          borderColor: borderColors[index],
+        }))} />
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up stagger-3">
         {/* VxRx Scatter Plot */}
-        <Card className="lg:col-span-2 bg-zinc-900/80 border-zinc-800 card-hover">
+        <Card data-tour="vxrx-scatter" className="lg:col-span-2 bg-zinc-900/80 border-zinc-800 card-hover">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
@@ -163,10 +198,10 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <CardTitle className="text-sm font-semibold text-zinc-300">
-                  Mapa VxRx — Valor vs Risco
+                  {t("vxRxMap")}
                 </CardTitle>
                 <p className="text-xs text-zinc-600">
-                  Todas as analises plotadas no espaco decisorio neural
+                  {t("vxRxDescription")}
                 </p>
               </div>
             </div>
@@ -192,6 +227,11 @@ export default async function DashboardPage() {
         <BoardAdvisorWidget />
       </div>
 
+      {/* Activity Feed */}
+      <div className="animate-slide-up stagger-5">
+        <ActivityFeed activities={feedActivities} maxItems={8} />
+      </div>
+
       {/* Recent Analyses Table */}
       <Card className="bg-zinc-900/80 border-zinc-800 animate-slide-up stagger-4">
         <CardHeader className="pb-2">
@@ -201,12 +241,12 @@ export default async function DashboardPage() {
                 <Activity className="w-4 h-4 text-cyan-400" />
               </div>
               <CardTitle className="text-sm font-semibold text-zinc-300">
-                Ultimas Analises
+                {t("recentAnalyses")}
               </CardTitle>
             </div>
             <Link href="/analysis">
               <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-zinc-300 text-xs">
-                Ver todas
+                {tc("viewAll")}
               </Button>
             </Link>
           </div>
@@ -217,10 +257,10 @@ export default async function DashboardPage() {
               <thead>
                 <tr className="border-b border-zinc-800">
                   <th className="text-left py-3 px-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                    Jogador
+                    {t("playerCol")}
                   </th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                    Posicao
+                    {t("positionCol")}
                   </th>
                   <th className="text-center py-3 px-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                     Vx
@@ -232,10 +272,10 @@ export default async function DashboardPage() {
                     SCN+
                   </th>
                   <th className="text-center py-3 px-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                    Decisao
+                    {t("decisionCol")}
                   </th>
                   <th className="text-right py-3 px-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                    Data
+                    {t("dateCol")}
                   </th>
                 </tr>
               </thead>
@@ -309,6 +349,9 @@ export default async function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Guided Tour — first-time users */}
+      <DashboardTour />
     </div>
   )
 }

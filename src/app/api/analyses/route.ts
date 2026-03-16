@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { getAnalyses, createAnalysis, playerExists, clubExists } from "@/db/queries";
+import { getAnalyses, createAnalysis, playerExists, clubExists, getPlayerById } from "@/db/queries";
 import { requireAuth } from "@/lib/auth-helpers";
 import { hasPermission } from "@/lib/rbac";
 import { isValidUUID, isNumberInRange, stripHtmlTags } from "@/lib/validation";
+import { inngest } from "@/lib/inngest-client";
 
 const VALID_DECISIONS = [
   "CONTRATAR",
@@ -163,6 +164,24 @@ export async function POST(request: Request) {
     };
 
     const analysis = await createAnalysis(sanitizedBody);
+
+    // Emit event for background processing (notifications, cache invalidation, webhooks)
+    try {
+      const player = await getPlayerById(body.playerId);
+      await inngest.send({
+        name: "cortex/analysis.created",
+        data: {
+          analysisId: analysis.id,
+          playerId: body.playerId,
+          orgId: session!.orgId,
+          userId: session!.userId,
+          playerName: player?.name ?? "Jogador",
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send analysis.created event:", err);
+    }
+
     return NextResponse.json({ data: analysis }, { status: 201 });
   } catch (error) {
     console.error("Failed to create analysis:", error);

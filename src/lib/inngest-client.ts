@@ -12,6 +12,7 @@ type CortexEvents = {
       analysisId: string;
       playerId: string;
       orgId: string;
+      userId: string;
       playerName: string;
     };
   };
@@ -19,6 +20,7 @@ type CortexEvents = {
     data: {
       reportId: string;
       orgId: string;
+      userId: string;
       analysisId: string;
     };
   };
@@ -26,6 +28,7 @@ type CortexEvents = {
     data: {
       agentType: string;
       orgId: string;
+      userId: string;
       runId: string;
       playerId?: string;
     };
@@ -34,6 +37,7 @@ type CortexEvents = {
     data: {
       targetId: string;
       orgId: string;
+      userId: string;
       playerName: string;
     };
   };

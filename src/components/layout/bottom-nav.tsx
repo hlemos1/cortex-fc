@@ -3,13 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LayoutDashboard, Users, Plus, MessageSquare, Menu } from "lucide-react"
+import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/players", label: "Jogadores", icon: Users },
-  { href: "/analysis/new", label: "Analise", icon: Plus, isCenter: true },
-  { href: "/chat", label: "Chat IA", icon: MessageSquare },
+const navItemDefs = [
+  { href: "/dashboard", key: "dashboard" as const, icon: LayoutDashboard },
+  { href: "/players", key: "players" as const, icon: Users },
+  { href: "/analysis/new", key: "newAnalysis" as const, icon: Plus, isCenter: true },
+  { href: "/chat", key: "chat" as const, icon: MessageSquare },
 ]
 
 interface BottomNavProps {
@@ -18,6 +19,13 @@ interface BottomNavProps {
 
 export function BottomNav({ onMorePress }: BottomNavProps) {
   const pathname = usePathname()
+  const t = useTranslations("nav")
+  const tc = useTranslations("common")
+
+  const navItems = navItemDefs.map((item) => ({
+    ...item,
+    label: t(item.key),
+  }))
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden border-t border-zinc-800/60 bg-[#0c0c0f]/95 backdrop-blur-xl safe-area-bottom">
@@ -69,11 +77,11 @@ export function BottomNav({ onMorePress }: BottomNavProps) {
         {/* More button */}
         <button
           onClick={onMorePress}
-          aria-label="Mais opcoes"
+          aria-label={tc("moreOptions")}
           className="flex flex-col items-center justify-center gap-0.5 py-1 min-w-[56px]"
         >
           <Menu className="w-5 h-5 text-zinc-600" />
-          <span className="text-[10px] text-zinc-600">Mais</span>
+          <span className="text-[10px] text-zinc-600">{tc("more")}</span>
         </button>
       </div>
     </nav>

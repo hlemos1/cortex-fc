@@ -13,6 +13,7 @@ import { db } from "@/db/index";
 import { reports } from "@/db/schema";
 import { organizations } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { inngest } from "@/lib/inngest-client";
 
 export async function POST(request: Request) {
   try {
@@ -100,6 +101,21 @@ export async function POST(request: Request) {
         createdBy: session!.userId,
       })
       .returning();
+
+    // Emit event for background processing (notifications, webhooks)
+    try {
+      await inngest.send({
+        name: "cortex/report.generated",
+        data: {
+          reportId: report.id,
+          orgId: session!.orgId,
+          userId: session!.userId,
+          analysisId: analysisId ?? "",
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send report.generated event:", err);
+    }
 
     // Return PDF as response
     return new NextResponse(new Uint8Array(pdfBuffer), {

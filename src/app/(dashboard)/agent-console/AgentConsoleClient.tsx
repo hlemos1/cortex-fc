@@ -20,6 +20,10 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { AgentTemplates } from "@/components/cortex/AgentTemplates"
+import { AgentUsageChart } from "@/components/cortex/AgentUsageChart"
+import { AgentCostTracker } from "@/components/cortex/AgentCostTracker"
+import { AgentPerformanceRadar } from "@/components/cortex/AgentPerformanceRadar"
 
 interface AgentRun {
   id: string
@@ -50,9 +54,38 @@ interface Metrics {
   }[]
 }
 
+interface UsageChartRow {
+  date: string
+  ORACLE: number
+  ANALISTA: number
+  SCOUT: number
+  BOARD_ADVISOR: number
+  CFO_MODELER: number
+  COACHING_ASSIST: number
+}
+
+interface CostTrackerData {
+  totalTokens: number
+  totalRuns: number
+  byAgent: { agentType: string; totalTokens: number; count: number }[]
+  dailyUsage: { date: string; tokens: number; cost: number }[]
+}
+
+interface AgentPerformanceEntry {
+  name: string
+  successRate: number
+  avgSpeed: number
+  tokenEfficiency: number
+  usage: number
+  reliability: number
+}
+
 interface Props {
   initialRuns: AgentRun[]
   metrics: Metrics
+  usageChartData?: UsageChartRow[]
+  costTrackerData?: CostTrackerData
+  agentPerformanceData?: AgentPerformanceEntry[]
 }
 
 const AGENT_COLORS: Record<string, { text: string; bg: string; border: string }> = {
@@ -76,7 +109,7 @@ const AGENT_LABELS: Record<string, string> = {
 // Approximate cost per token (Claude Sonnet input+output average)
 const COST_PER_TOKEN = 0.000015 // ~$15/1M tokens average
 
-export function AgentConsoleClient({ initialRuns, metrics }: Props) {
+export function AgentConsoleClient({ initialRuns, metrics, usageChartData, costTrackerData, agentPerformanceData }: Props) {
   const [runs] = useState(initialRuns)
   const [agentFilter, setAgentFilter] = useState<string>("ALL")
   const [statusFilter, setStatusFilter] = useState<"ALL" | "success" | "error">("ALL")
@@ -138,11 +171,20 @@ export function AgentConsoleClient({ initialRuns, metrics }: Props) {
       {/* Header */}
       <div className="animate-slide-down">
         <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">
-          Console de Agentes IA
+          Agent Studio
         </h1>
         <p className="text-sm text-zinc-500 mt-1">
-          Historico, metricas e auditoria das execucoes de IA
+          Execute, monitore e audite agentes de IA
         </p>
+      </div>
+
+      {/* Agent Templates — Quick Launch */}
+      <div className="space-y-3 animate-slide-up">
+        <div className="flex items-center gap-2">
+          <Bot className="w-4 h-4 text-emerald-500" />
+          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Executar Agente</h2>
+        </div>
+        <AgentTemplates />
       </div>
 
       {/* Metric Cards */}
@@ -277,6 +319,31 @@ export function AgentConsoleClient({ initialRuns, metrics }: Props) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Usage Chart + Cost Tracker */}
+      {(usageChartData || costTrackerData) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-slide-up">
+          {usageChartData && (
+            <div className="lg:col-span-2">
+              <AgentUsageChart data={usageChartData} />
+            </div>
+          )}
+          {costTrackerData && (
+            <div className="lg:col-span-1">
+              <AgentCostTracker {...costTrackerData} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Agent Performance Radar */}
+      {agentPerformanceData && agentPerformanceData.length > 0 && (
+        <div className="flex justify-center animate-slide-up">
+          <div className="w-full max-w-2xl">
+            <AgentPerformanceRadar agents={agentPerformanceData} />
+          </div>
+        </div>
       )}
 
       {/* Filters + Export */}

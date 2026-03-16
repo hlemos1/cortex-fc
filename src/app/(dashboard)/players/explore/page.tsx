@@ -15,6 +15,7 @@ import {
   Hash,
   Filter,
 } from "lucide-react"
+import { StaggerList, StaggerItem } from "@/components/ui/motion"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -618,11 +619,13 @@ export default function ExplorePage() {
           {loading && <GridSkeleton count={12} />}
 
           {!loading && filteredTeams.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <StaggerList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredTeams.map((t) => (
-                <TeamCard key={t.team.id} team={t} onSelect={() => selectTeam(t)} />
+                <StaggerItem key={t.team.id}>
+                  <TeamCard team={t} onSelect={() => selectTeam(t)} />
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerList>
           )}
 
           {!loading && teams.length > 0 && filteredTeams.length === 0 && (
@@ -717,11 +720,13 @@ export default function ExplorePage() {
           {loading && <GridSkeleton count={12} />}
 
           {!loading && filteredPlayers.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <StaggerList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredPlayers.map((p) => (
-                <PlayerCard key={p.id} player={p} />
+                <StaggerItem key={p.id}>
+                  <PlayerCard player={p} />
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerList>
           )}
 
           {!loading && squad && squad.players.length === 0 && (

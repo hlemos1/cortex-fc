@@ -1101,3 +1101,223 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
     ));
   return result.count;
 }
+
+// ============================================
+// ANALYTICS QUERIES
+// ============================================
+
+export async function getAnalyticsOverview(orgId?: string) {
+  const orgFilter = orgId
+    ? sql`${neuralAnalyses.analystId} IN (SELECT id FROM users WHERE org_id = ${orgId})`
+    : undefined;
+
+  // Total players and analyses
+  const [playerCount] = await db
+    .select({ value: count() })
+    .from(players);
+
+  const [analysisCount] = await db
+    .select({ value: count() })
+    .from(neuralAnalyses)
+    .where(orgFilter);
+
+  // Average scores
+  const [avgScores] = await db
+    .select({
+      avgVx: avg(neuralAnalyses.vx),
+      avgRx: avg(neuralAnalyses.rx),
+      avgSCNPlus: avg(neuralAnalyses.scnPlus),
+    })
+    .from(neuralAnalyses)
+    .where(orgFilter);
+
+  // Decision breakdown
+  const decisionsBreakdown = await db
+    .select({
+      decision: neuralAnalyses.decision,
+      count: count(),
+    })
+    .from(neuralAnalyses)
+    .where(orgFilter)
+    .groupBy(neuralAnalyses.decision);
+
+  // Monthly analyses (last 12 months)
+  const monthlyAnalyses = await db
+    .select({
+      month: sql<string>`to_char(${neuralAnalyses.createdAt}, 'YYYY-MM')`,
+      count: count(),
+    })
+    .from(neuralAnalyses)
+    .where(
+      orgFilter
+        ? sql`${orgFilter} AND ${neuralAnalyses.createdAt} >= NOW() - INTERVAL '12 months'`
+        : sql`${neuralAnalyses.createdAt} >= NOW() - INTERVAL '12 months'`
+    )
+    .groupBy(sql`to_char(${neuralAnalyses.createdAt}, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${neuralAnalyses.createdAt}, 'YYYY-MM')`);
+
+  // Position distribution
+  const positionDistribution = await db
+    .select({
+      position: players.positionCluster,
+      count: count(),
+    })
+    .from(players)
+    .groupBy(players.positionCluster);
+
+  // Top 5 performers by SCN+
+  const topPerformers = await db
+    .select({
+      id: players.id,
+      name: players.name,
+      photoUrl: players.photoUrl,
+      scnPlus: neuralAnalyses.scnPlus,
+      vx: neuralAnalyses.vx,
+      rx: neuralAnalyses.rx,
+      decision: neuralAnalyses.decision,
+    })
+    .from(neuralAnalyses)
+    .innerJoin(players, eq(neuralAnalyses.playerId, players.id))
+    .where(orgFilter)
+    .orderBy(desc(neuralAnalyses.scnPlus))
+    .limit(5);
+
+  return {
+    totalPlayers: playerCount.value,
+    totalAnalyses: analysisCount.value,
+    avgVx: avgScores.avgVx ? parseFloat(Number(avgScores.avgVx).toFixed(2)) : 0,
+    avgRx: avgScores.avgRx ? parseFloat(Number(avgScores.avgRx).toFixed(2)) : 0,
+    avgSCNPlus: avgScores.avgSCNPlus ? parseFloat(Number(avgScores.avgSCNPlus).toFixed(1)) : 0,
+    decisionsBreakdown: decisionsBreakdown.map((d) => ({
+      decision: d.decision,
+      count: d.count,
+    })),
+    monthlyAnalyses: monthlyAnalyses.map((m) => ({
+      month: m.month,
+      count: m.count,
+    })),
+    positionDistribution: positionDistribution.map((p) => ({
+      position: p.position,
+      count: p.count,
+    })),
+    topPerformers,
+  };
+}
+
+export async function getContractTimeline(orgId?: string) {
+  const eighteenMonthsFromNow = new Date();
+  eighteenMonthsFromNow.setMonth(eighteenMonthsFromNow.getMonth() + 18);
+  const now = new Date();
+
+  const playersWithContracts = await db
+    .select({
+      id: players.id,
+      name: players.name,
+      contractUntil: players.contractUntil,
+      marketValue: players.marketValue,
+      clubName: clubs.name,
+    })
+    .from(players)
+    .leftJoin(clubs, eq(players.currentClubId, clubs.id))
+    .where(
+      sql`${players.contractUntil} IS NOT NULL AND ${players.contractUntil} >= ${now} AND ${players.contractUntil} <= ${eighteenMonthsFromNow}`
+    )
+    .orderBy(players.contractUntil);
+
+  // Group by quarter
+  const quarters: Record<string, { id: string; name: string; club: string | null; contractUntil: Date; marketValue: number | null }[]> = {};
+
+  for (const p of playersWithContracts) {
+    if (!p.contractUntil) continue;
+    const d = new Date(p.contractUntil);
+    const q = Math.ceil((d.getMonth() + 1) / 3);
+    const key = `${d.getFullYear()}-Q${q}`;
+    if (!quarters[key]) quarters[key] = [];
+    quarters[key].push({
+      id: p.id,
+      name: p.name,
+      club: p.clubName,
+      contractUntil: p.contractUntil,
+      marketValue: p.marketValue,
+    });
+  }
+
+  return Object.entries(quarters)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([quarter, qPlayers]) => ({ quarter, players: qPlayers }));
+}
+
+export async function getAgentUsageTimeline(orgId?: string, days = 30) {
+  const conditions = [
+    sql`${agentRuns.createdAt} >= NOW() - INTERVAL '1 day' * ${days}`,
+  ];
+  if (orgId) conditions.push(eq(agentRuns.orgId, orgId));
+
+  const rows = await db
+    .select({
+      date: sql<string>`to_char(${agentRuns.createdAt}, 'YYYY-MM-DD')`,
+      agentType: agentRuns.agentType,
+      count: count(),
+      tokens: sum(agentRuns.tokensUsed),
+    })
+    .from(agentRuns)
+    .where(and(...conditions))
+    .groupBy(sql`to_char(${agentRuns.createdAt}, 'YYYY-MM-DD')`, agentRuns.agentType)
+    .orderBy(sql`to_char(${agentRuns.createdAt}, 'YYYY-MM-DD')`);
+
+  return rows.map((r) => ({
+    date: r.date,
+    agentType: r.agentType,
+    count: r.count,
+    tokens: Number(r.tokens ?? 0),
+  }));
+}
+
+export async function getScoutingFunnel(orgId?: string) {
+  const orgFilter = orgId ? eq(scoutingTargets.orgId, orgId) : undefined;
+
+  // Total scouting targets (Identificados)
+  const [totalTargets] = await db
+    .select({ count: count() })
+    .from(scoutingTargets)
+    .where(orgFilter);
+
+  // Targets with analysis (Analisados)
+  const [analyzed] = await db
+    .select({ count: count() })
+    .from(scoutingTargets)
+    .where(
+      orgFilter
+        ? and(orgFilter, sql`${scoutingTargets.analysisId} IS NOT NULL`)
+        : sql`${scoutingTargets.analysisId} IS NOT NULL`
+    );
+
+  // Aprovados: targets whose analysis has decision CONTRATAR or BLINDAR
+  const [approved] = await db
+    .select({ count: count() })
+    .from(scoutingTargets)
+    .innerJoin(neuralAnalyses, eq(scoutingTargets.analysisId, neuralAnalyses.id))
+    .where(
+      orgFilter
+        ? and(orgFilter, inArray(neuralAnalyses.decision, ["CONTRATAR", "BLINDAR"]))
+        : inArray(neuralAnalyses.decision, ["CONTRATAR", "BLINDAR"])
+    );
+
+  // Recusados: targets whose analysis has decision RECUSAR
+  const [rejected] = await db
+    .select({ count: count() })
+    .from(scoutingTargets)
+    .innerJoin(neuralAnalyses, eq(scoutingTargets.analysisId, neuralAnalyses.id))
+    .where(
+      orgFilter
+        ? and(orgFilter, eq(neuralAnalyses.decision, "RECUSAR"))
+        : eq(neuralAnalyses.decision, "RECUSAR")
+    );
+
+  return [
+    { stage: "Identificados", count: totalTargets.count },
+    { stage: "Analisados", count: analyzed.count },
+    { stage: "Aprovados", count: approved.count },
+    { stage: "Recusados", count: rejected.count },
+  ];
+}

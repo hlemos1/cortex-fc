@@ -5,30 +5,24 @@ import {
   MapPin,
   Calendar,
   Banknote,
-  FileText,
   ArrowLeft,
   Activity,
   Globe,
-  Shield,
-  Cpu,
-  BarChart3,
   Clock,
-  TrendingUp,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { NeuralRadar } from "@/components/cortex/NeuralRadar"
-import { AlgorithmBars } from "@/components/cortex/AlgorithmBars"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { UpgradePrompt } from "@/components/cortex/UpgradePrompt"
-import { SeasonStats } from "@/components/cortex/SeasonStats"
-import { PerformanceChart } from "@/components/cortex/PerformanceChart"
 import { PositionHeatmap } from "@/components/cortex/PositionHeatmap"
-import { TransferTimeline } from "@/components/cortex/TransferTimeline"
 import { PlayerAgentsBar } from "@/components/cortex/PlayerAgentsBar"
+import { PlayerQuickStats } from "@/components/cortex/PlayerQuickStats"
 import { CoachingAssistPanel } from "@/components/cortex/CoachingAssistPanel"
+import { SimilarPlayers } from "@/components/cortex/SimilarPlayers"
+import { ProfileTabs } from "./ProfileTabs"
 import { getPlayerById, getPlayerSeasonStats, getPlayerMatchPerformance, getPlayerTransfers } from "@/db/queries"
+import { getSimilarPlayers } from "@/db/queries/similar-players"
+import { HeroParallax } from "./HeroParallax"
 import {
   formatPlayerForUI,
   toNeuralLayers,
@@ -45,11 +39,12 @@ export default async function PlayerDetailPage({
 }) {
   const { id } = await params
 
-  const [dbPlayer, seasonStats, matchPerformance, transferHistory] = await Promise.all([
+  const [dbPlayer, seasonStats, matchPerformance, transferHistory, similarPlayers] = await Promise.all([
     getPlayerById(id),
     getPlayerSeasonStats(id),
     getPlayerMatchPerformance(id),
     getPlayerTransfers(id),
+    getSimilarPlayers(id),
   ])
 
   if (!dbPlayer) {
@@ -100,6 +95,26 @@ export default async function PlayerDetailPage({
             ? "from-emerald-900/40 via-emerald-950/20"
             : "from-zinc-800/60 via-zinc-900/30"
 
+  const accentLine =
+    player.position.includes("Atacante") || player.position.includes("Ponta")
+      ? "from-red-500 via-red-400 to-red-600"
+      : player.position.includes("Meio")
+        ? "from-amber-500 via-amber-400 to-amber-600"
+        : player.position.includes("Zagueiro") || player.position.includes("Lateral")
+          ? "from-blue-500 via-blue-400 to-blue-600"
+          : player.position.includes("Goleiro")
+            ? "from-emerald-500 via-emerald-400 to-emerald-600"
+            : "from-zinc-500 via-zinc-400 to-zinc-600"
+
+  // Contract urgency check
+  const contractDate = player.contractEnd !== "N/A" ? new Date(player.contractEnd) : null
+  const now = new Date()
+  const monthsUntilExpiry = contractDate
+    ? (contractDate.getFullYear() - now.getFullYear()) * 12 + (contractDate.getMonth() - now.getMonth())
+    : null
+  const contractUrgent6 = monthsUntilExpiry !== null && monthsUntilExpiry <= 6
+  const contractUrgent12 = monthsUntilExpiry !== null && monthsUntilExpiry <= 12
+
   return (
     <div className="animate-fade-in space-y-6">
       {/* Back button */}
@@ -115,7 +130,9 @@ export default async function PlayerDetailPage({
       </Link>
 
       {/* Player Hero Header */}
-      <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${positionColor} to-zinc-900/80 border border-zinc-800 animate-slide-up stagger-1`}>
+      <HeroParallax>
+      <div className={`relative rounded-xl overflow-hidden bg-gradient-to-br ${positionColor} to-zinc-900/80 border border-zinc-800`}>
+        <div className={`h-0.5 bg-gradient-to-r ${accentLine}`} />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(16,185,129,0.05),_transparent_60%)]" />
         <div className="relative p-6 md:p-8">
           <div className="flex flex-col md:flex-row gap-6">
@@ -176,15 +193,36 @@ export default async function PlayerDetailPage({
                   <Banknote className="w-3 h-3" />
                   Salario: &euro;{player.salary}M/ano
                 </span>
-                <span className="flex items-center gap-1">
+                <span className={`flex items-center gap-1 ${contractUrgent6 ? "text-red-400 border border-red-500/50 rounded-full px-2 py-0.5 -my-0.5" : ""}`}>
                   <Clock className="w-3 h-3" />
                   Contrato ate: {player.contractEnd}
+                  {contractUrgent12 && (
+                    <span className="relative flex h-2 w-2 ml-1">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                    </span>
+                  )}
                 </span>
               </div>
             </div>
           </div>
         </div>
       </div>
+      </HeroParallax>
+
+      {/* Quick Stats Ribbon */}
+      <PlayerQuickStats
+        vx={latest?.vx}
+        rx={latest?.rx}
+        scnPlus={latest?.algorithms.SCN_plus}
+        decision={latest?.decision as import("@/types/cortex").CortexDecision | undefined}
+        appearances={seasonStats?.appearances}
+        goals={seasonStats?.goals}
+        assists={seasonStats?.assists}
+        rating={seasonStats?.avgRating ?? undefined}
+        marketValue={player.marketValue}
+        age={player.age ?? undefined}
+      />
 
       {/* Agent Actions Bar */}
       <PlayerAgentsBar
@@ -198,325 +236,37 @@ export default async function PlayerDetailPage({
       />
 
       {latest ? (
-        <>
-          {/* VxRx + Decision Card */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-zinc-900/80 border-zinc-800 glass card-hover animate-slide-up stagger-2">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-500" />
-                  VxRx Score
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-8 mb-4">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold font-mono text-emerald-400">
-                      {latest.vx.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-zinc-600 mt-1">Vx (Valor)</p>
-                  </div>
-                  <div className="w-px h-12 bg-zinc-800" />
-                  <div className="text-center">
-                    <p className="text-3xl font-bold font-mono text-red-400">
-                      {latest.rx.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-zinc-600 mt-1">Rx (Risco)</p>
-                  </div>
-                </div>
-                <Separator className="bg-zinc-800 my-4" />
-                <div className="text-center">
-                  <p className="text-xs text-zinc-500 mb-2">Decisao ORACLE</p>
-                  <DecisionBadge decision={latest.decision} size="lg" />
-                  <p className="text-xs text-zinc-600 mt-2 font-mono">
-                    Confianca: {latest.confidence}%
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Vx Components */}
-            <Card className="bg-zinc-900/80 border-zinc-800 glass card-hover animate-slide-up stagger-3">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-emerald-500" />
-                  Componentes Vx
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { label: "T — Tecnico", value: latest.vxComponents.technical },
-                  { label: "M — Impacto Mercado", value: latest.vxComponents.marketImpact },
-                  { label: "A — Adaptacao Cultural", value: latest.vxComponents.culturalAdaptation },
-                  { label: "N — Networking", value: latest.vxComponents.networkingBenefit },
-                  { label: "D — Depreciacao Idade", value: latest.vxComponents.ageDepreciation },
-                  { label: "L — Passivos", value: latest.vxComponents.liabilities },
-                  { label: "R — Risco Regulatorio", value: latest.vxComponents.regulatoryRisk },
-                ].map((comp) => (
-                  <div key={comp.label} className="flex items-center justify-between group">
-                    <span className="text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors">{comp.label}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
-                          style={{ width: `${comp.value * 10}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-mono text-zinc-400 w-6 text-right">
-                        {comp.value}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                <Separator className="bg-zinc-800 my-2" />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-400 font-semibold">C — Custo Total</span>
-                  <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                    &euro;{latest.vxComponents.totalCost}M
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Rx Components */}
-            <Card className="bg-zinc-900/80 border-zinc-800 glass card-hover animate-slide-up stagger-4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-red-500" />
-                  Componentes Rx
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { label: "Tg — Gap Tatico", value: latest.rxComponents.tacticalGap },
-                  { label: "Cx — Fit Contextual", value: latest.rxComponents.contextualFit },
-                  { label: "Ep — Experiencia", value: latest.rxComponents.experienceProfile },
-                  { label: "Ni — Indice Narrativo", value: latest.rxComponents.narrativeIndex },
-                  { label: "Mf — Fortaleza Mental", value: latest.rxComponents.mentalFortitude },
-                  { label: "Mi — Risco Lesao", value: latest.rxComponents.injuryMicroRisk },
-                  { label: "S — Risco Suspensao", value: latest.rxComponents.suspensionRisk },
-                  { label: "Mj — Jitter Mercado", value: latest.rxComponents.marketJitter },
-                ].map((comp) => (
-                  <div key={comp.label} className="flex items-center justify-between group">
-                    <span className="text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors">{comp.label}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-red-600 to-red-400 rounded-full transition-all duration-500"
-                          style={{ width: `${comp.value * 10}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-mono text-zinc-400 w-6 text-right">
-                        {comp.value}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                <Separator className="bg-zinc-800 my-2" />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-400 font-semibold">Va — Valor em Risco</span>
-                  <span className="text-xs font-mono text-red-400 bg-red-500/10 px-2 py-0.5 rounded">
-                    &euro;{latest.rxComponents.valueAtRisk}M
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Neural Radar + Algorithm Bars */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-zinc-900/80 border-zinc-800 glass card-hover animate-slide-up stagger-5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-cyan-500" />
-                  <div>
-                    <span>Radar Neural — 7 Camadas</span>
-                    <p className="text-[11px] text-zinc-600 font-normal mt-0.5">
-                      Perfil multidimensional de performance e potencial
-                    </p>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <NeuralRadar
-                  layers={latest.layers}
-                  playerName={player.name}
-                  scnScore={latest.algorithms.SCN_plus}
-                  size={340}
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900/80 border-zinc-800 glass card-hover animate-slide-up stagger-5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-amber-500" />
-                  <div>
-                    <span>Algoritmos Proprietarios</span>
-                    <p className="text-[11px] text-zinc-600 font-normal mt-0.5">
-                      Scores compostos dos modelos CortexFC
-                    </p>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AlgorithmBars scores={latest.algorithms} />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Reasoning */}
-          <Card className="bg-zinc-900/80 border-zinc-800 glass animate-slide-up">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-emerald-500" />
-                Parecer ORACLE
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-zinc-300 leading-relaxed">{latest.reasoning}</p>
-            </CardContent>
-          </Card>
-
-          {/* Season Stats */}
-          {seasonStats && (
-            <Card className="bg-zinc-900/80 border-zinc-800 glass animate-slide-up">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-cyan-500" />
-                  Estatisticas da Temporada
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SeasonStats stats={seasonStats} />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Performance Chart + Position Heatmap */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {matchPerformance.length > 0 && (
-              <Card className="bg-zinc-900/80 border-zinc-800 glass card-hover animate-slide-up md:col-span-2">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-500" />
-                    Desempenho por Jogo
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PerformanceChart data={matchPerformance} metric="rating" />
-                </CardContent>
-              </Card>
-            )}
-
-            <Card className="bg-zinc-900/80 border-zinc-800 glass card-hover animate-slide-up">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-emerald-500" />
-                  Mapa de Posicao
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex justify-center py-4">
-                <PositionHeatmap
-                  positionCluster={player.positionCluster}
-                  positionDetail={dbPlayer.positionDetail ?? undefined}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Transfer Timeline */}
-          {transferHistory.length > 0 && (
-            <Card className="bg-zinc-900/80 border-zinc-800 glass animate-slide-up">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-amber-500" />
-                  Historico de Transferencias
-                  <span className="ml-auto text-[10px] font-mono text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">
-                    {transferHistory.length} movimentacoes
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TransferTimeline transfers={transferHistory} />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Analysis History — Timeline */}
-          {analyses.length > 1 && (
-            <Card className="bg-zinc-900/80 border-zinc-800 glass animate-slide-up">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-zinc-400 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-500" />
-                  Historico de Analises
-                  <span className="ml-auto text-[10px] font-mono text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">
-                    {analyses.length} registros
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="relative">
-                  {/* Timeline vertical line */}
-                  <div className="absolute left-[18px] top-2 bottom-2 w-px bg-gradient-to-b from-emerald-500/30 via-zinc-700/50 to-transparent" />
-
-                  <div className="space-y-4">
-                    {analyses.map((a, index) => (
-                      <div
-                        key={a.id}
-                        className="relative pl-10 animate-slide-up"
-                        style={{ animationDelay: `${(index + 1) * 100}ms` }}
-                      >
-                        {/* Timeline dot */}
-                        <div className={`absolute left-3 top-3 w-3 h-3 rounded-full border-2 ${
-                          index === 0
-                            ? "bg-emerald-500 border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.4)]"
-                            : "bg-zinc-800 border-zinc-600"
-                        }`} />
-
-                        <div className={`rounded-lg border p-4 transition-all duration-200 hover:bg-zinc-800/40 ${
-                          index === 0
-                            ? "border-emerald-500/20 bg-emerald-500/5"
-                            : "border-zinc-800/50 bg-zinc-900/30"
-                        }`}>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-zinc-500 font-mono">{a.date}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-zinc-600 font-mono">
-                                Conf. {a.confidence}%
-                              </span>
-                              <DecisionBadge decision={a.decision} size="sm" />
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-zinc-600 uppercase">Vx</span>
-                              <span className="font-mono text-emerald-400 text-sm font-semibold">
-                                {a.vx.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-zinc-600 uppercase">Rx</span>
-                              <span className="font-mono text-red-400 text-sm font-semibold">
-                                {a.rx.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[10px] text-zinc-600 uppercase">SCN+</span>
-                              <span className="font-mono text-cyan-400 text-sm font-semibold">
-                                {a.algorithms.SCN_plus}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
+        <ProfileTabs
+          vx={latest.vx}
+          rx={latest.rx}
+          decision={latest.decision}
+          confidence={latest.confidence}
+          vxComponents={latest.vxComponents}
+          rxComponents={latest.rxComponents}
+          layers={latest.layers}
+          algorithms={latest.algorithms}
+          reasoning={latest.reasoning}
+          playerName={player.name}
+          positionCluster={player.positionCluster}
+          positionDetail={dbPlayer.positionDetail ?? undefined}
+          seasonStats={seasonStats}
+          matchPerformance={matchPerformance.map((m) => ({
+            date: typeof m.date === "string" ? m.date : new Date(m.date).toISOString().slice(0, 10),
+            rating: m.rating,
+            xg: m.xg,
+            goals: m.goals,
+          }))}
+          transferHistory={transferHistory}
+          analyses={analyses.map((a) => ({
+            id: a.id,
+            date: a.date,
+            vx: a.vx,
+            rx: a.rx,
+            decision: a.decision,
+            confidence: a.confidence,
+            algorithms: a.algorithms,
+          }))}
+        />
       ) : (
         <>
           <Card className="bg-zinc-900/80 border-zinc-800 glass animate-scale-in">
@@ -558,6 +308,9 @@ export default async function PlayerDetailPage({
           />
         </>
       )}
+
+      {/* Similar Players */}
+      <SimilarPlayers players={similarPlayers} currentPlayerId={id} />
 
       {/* Coaching Assist */}
       <CoachingAssistPanel

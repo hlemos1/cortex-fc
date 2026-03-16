@@ -77,6 +77,7 @@ export const organizations = pgTable("organizations", {
   ssoLoginUrl: text("sso_login_url"),
   ssoCertificate: text("sso_certificate"),
   ssoEnabled: boolean("sso_enabled").default(false),
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -5,6 +5,7 @@ import { eq, desc, sql } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth-helpers";
 import { isValidUUID } from "@/lib/validation";
 import { hasPermission } from "@/lib/rbac";
+import { inngest } from "@/lib/inngest-client";
 
 // GET — list scouting targets for the org
 export async function GET() {
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
     // Check player exists
     const player = await db.query.players.findFirst({
       where: eq(players.id, playerId),
-      columns: { id: true },
+      columns: { id: true, name: true },
     });
     if (!player) {
       return NextResponse.json({ error: "Jogador nao encontrado" }, { status: 404 });
@@ -123,6 +124,21 @@ export async function POST(request: Request) {
         addedBy: session!.userId,
       })
       .returning();
+
+    // Emit event for background processing (notifications, cache invalidation, webhooks)
+    try {
+      await inngest.send({
+        name: "cortex/scouting.target.added",
+        data: {
+          targetId: inserted.id,
+          orgId: session!.orgId,
+          userId: session!.userId,
+          playerName: player!.name,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send scouting.target.added event:", err);
+    }
 
     return NextResponse.json({ data: inserted }, { status: 201 });
   } catch (error) {

@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { LanguageSection } from "./LanguageSection"
+import { OfflineDataManager } from "@/components/cortex/OfflineDataManager"
 
 export default function SettingsPage() {
   const [claudeModel, setClaudeModel] = useState("claude-sonnet-4-20250514")
@@ -83,6 +85,9 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Idioma / Language */}
+        <LanguageSection />
+
         {/* Organizacao */}
         <Card className="glass rounded-xl card-hover animate-slide-up stagger-1 overflow-hidden relative">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
@@ -389,6 +394,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Dados Offline */}
+        <OfflineDataManager />
 
         {/* Dados & Exportacao */}
         <Card className="glass rounded-xl card-hover animate-slide-up overflow-hidden relative">

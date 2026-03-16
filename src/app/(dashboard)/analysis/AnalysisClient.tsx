@@ -9,6 +9,7 @@ import { VxRxScatter } from "@/components/cortex/VxRxScatter"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { UpgradePrompt } from "@/components/cortex/UpgradePrompt"
 import { EmptyState } from "@/components/ui/empty-state"
+import { EmptyStateCTA } from "@/components/cortex/EmptyStateCTA"
 import type { AnalysisUI } from "@/lib/db-transforms"
 import type { CortexDecision } from "@/types/cortex"
 
@@ -304,12 +305,11 @@ export function AnalysisClient({ analyses }: Props) {
             </table>
           </div>
           {filtered.length === 0 && analyses.length === 0 && (
-            <EmptyState
-              icon={Activity}
+            <EmptyStateCTA
+              icon={<Activity className="w-6 h-6" />}
               title="Nenhuma analise realizada"
-              description="Analise seu primeiro jogador para ver metricas neurais aqui"
-              actionLabel="Nova Analise"
-              actionHref="/analysis/new"
+              description="Execute o motor ORACLE para avaliar seu primeiro jogador."
+              primaryAction={{ label: "Nova Analise", href: "/analysis/new" }}
             />
           )}
           {filtered.length === 0 && analyses.length > 0 && (

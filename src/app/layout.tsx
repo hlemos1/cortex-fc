@@ -1,20 +1,27 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import { SessionProvider } from "next-auth/react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ToastProvider } from "@/components/ui/toast"
+import { IntlClientProvider } from "@/components/providers/IntlClientProvider"
+import { getLocale, getMessages } from "next-intl/server"
 import "./globals.css"
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { OfflineBanner } from "@/components/ui/offline-banner"
+import { InstallPrompt } from "@/components/cortex/InstallPrompt"
+import { UpdatePrompt } from "@/components/cortex/UpdatePrompt"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 })
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
+  display: "swap",
 })
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://cortex-fc.vercel.app"
@@ -52,13 +59,16 @@ export const metadata: Metadata = {
   ],
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
+  const messages = await getMessages()
+
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang={locale} className="dark">
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="dns-prefetch" href="https://media.api-sports.io" />
@@ -67,13 +77,20 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased subpixel-antialiased`}>
-        <SessionProvider>
-          <TooltipProvider delayDuration={300}>
-            <ToastProvider>{children}</ToastProvider>
-          </TooltipProvider>
-        </SessionProvider>
-              <Analytics />
+      <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased subpixel-antialiased`}>
+        <IntlClientProvider locale={locale} messages={messages as Record<string, unknown>}>
+          <SessionProvider>
+            <TooltipProvider delayDuration={300}>
+              <ToastProvider>
+                <OfflineBanner />
+                {children}
+                <InstallPrompt />
+                <UpdatePrompt />
+              </ToastProvider>
+            </TooltipProvider>
+          </SessionProvider>
+        </IntlClientProvider>
+        <Analytics />
         <SpeedInsights />
       </body>
     </html>
