@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Users, X, Globe, ChevronDown } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { EmptyStateCTA } from "@/components/cortex/EmptyStateCTA"
 import { PlayerAvatar } from "@/components/ui/player-avatar"
 import type { CortexDecision } from "@/types/cortex"
+import { useSearchPreferences } from "@/hooks/useSearchPreferences"
 
 export interface PlayerListItem {
   id: string
@@ -35,12 +36,35 @@ type SortField = "name" | "age" | "marketValue" | "scn" | "position" | "club"
 type SortDir = "asc" | "desc"
 
 export function PlayersClient({ players }: { players: PlayerListItem[] }) {
+  const { prefs, loaded: prefsLoaded, setSortField: saveSortField, setSortDir: saveSortDir, setFilter: saveFilter, clearFilters: clearSavedFilters } = useSearchPreferences("players")
   const [search, setSearch] = useState("")
   const [positionFilter, setPositionFilter] = useState("")
   const [clubFilter, setClubFilter] = useState("")
   const [sortField, setSortField] = useState<SortField>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+
+  // Restore preferences from localStorage after mount
+  useEffect(() => {
+    if (!prefsLoaded) return
+    if (prefs.sortField && ["name", "age", "marketValue", "scn", "position", "club"].includes(prefs.sortField)) {
+      setSortField(prefs.sortField as SortField)
+    }
+    if (prefs.sortDir) {
+      setSortDir(prefs.sortDir)
+    }
+    if (prefs.filters.position) setPositionFilter(prefs.filters.position)
+    if (prefs.filters.club) setClubFilter(prefs.filters.club)
+  }, [prefsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save preferences on change
+  useEffect(() => {
+    if (!prefsLoaded) return
+    saveSortField(sortField)
+    saveSortDir(sortDir)
+    saveFilter("position", positionFilter)
+    saveFilter("club", clubFilter)
+  }, [sortField, sortDir, positionFilter, clubFilter, prefsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const positions = useMemo(
     () => [...new Set(players.map((p) => p.positionCluster))].sort(),
@@ -180,7 +204,7 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
           </button>
           {(search || positionFilter || clubFilter) && (
             <button
-              onClick={() => { setSearch(""); setPositionFilter(""); setClubFilter("") }}
+              onClick={() => { setSearch(""); setPositionFilter(""); setClubFilter(""); clearSavedFilters() }}
               className="flex items-center gap-1 min-h-[36px] px-3 rounded-lg border border-zinc-700 bg-zinc-900/80 text-red-400 text-sm active:bg-red-500/10"
             >
               <X className="w-3 h-3" />
@@ -270,7 +294,7 @@ export function PlayersClient({ players }: { players: PlayerListItem[] }) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => { setSearch(""); setPositionFilter(""); setClubFilter("") }}
+                  onClick={() => { setSearch(""); setPositionFilter(""); setClubFilter(""); clearSavedFilters() }}
                   className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
                 >
                   <X className="w-3 h-3 mr-1" />

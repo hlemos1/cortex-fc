@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import {
   ArrowRightLeft,
   Plus,
@@ -13,6 +13,11 @@ import {
   Scale,
   ChevronDown,
   Sparkles,
+  Save,
+  Check,
+  Loader2,
+  Pencil,
+  FolderOpen,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -38,6 +43,15 @@ interface Scenario {
   id: string
   name: string
   transfers: Transfer[]
+  dbId?: string // ID from database (if persisted)
+}
+
+interface SavedScenario {
+  id: string
+  name: string
+  data: { transfers: Transfer[] }
+  createdAt: string | null
+  updatedAt: string | null
 }
 
 const POSITIONS = ["GK", "CB", "FB", "DM", "CM", "AM", "W", "ST"]
@@ -114,11 +128,111 @@ export default function SimulatorPage() {
     { id: "b", name: "Cenario B", transfers: [] },
   ])
   const [activeTab, setActiveTab] = useState("a")
+  const [savedList, setSavedList] = useState<SavedScenario[]>([])
+  const [showSavedDropdown, setShowSavedDropdown] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+  const [loadedOnce, setLoadedOnce] = useState(false)
+
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const activeScenario = scenarios.find((s) => s.id === activeTab)!
 
+  // ---- Load saved scenarios on mount ----
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/simulator")
+        if (!res.ok) return
+        const json = await res.json()
+        const data = json.data as SavedScenario[]
+        setSavedList(data)
+
+        if (data.length > 0) {
+          const loaded: Scenario[] = data.map((s, i) => ({
+            id: s.id,
+            name: s.name,
+            transfers: (s.data?.transfers ?? []) as Transfer[],
+            dbId: s.id,
+          }))
+          setScenarios(loaded)
+          setActiveTab(loaded[0].id)
+        }
+      } catch {
+        // silently fail — user can still use local scenarios
+      } finally {
+        setLoadedOnce(true)
+      }
+    }
+    load()
+  }, [])
+
+  // ---- Close dropdown on outside click ----
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowSavedDropdown(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
+
+  // ---- Auto-save (debounce 2s) ----
+  const saveScenario = useCallback(async (scenario: Scenario) => {
+    setSaveStatus("saving")
+    try {
+      if (scenario.dbId) {
+        await fetch("/api/simulator", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: scenario.dbId,
+            name: scenario.name,
+            data: { transfers: scenario.transfers },
+          }),
+        })
+      } else {
+        const res = await fetch("/api/simulator", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: scenario.name,
+            data: { transfers: scenario.transfers },
+          }),
+        })
+        if (res.ok) {
+          const json = await res.json()
+          const newId = json.data.id
+          setScenarios((prev) =>
+            prev.map((s) => (s.id === scenario.id ? { ...s, dbId: newId } : s))
+          )
+        }
+      }
+      setSaveStatus("saved")
+      setTimeout(() => setSaveStatus("idle"), 2000)
+    } catch {
+      setSaveStatus("idle")
+    }
+  }, [])
+
+  const triggerAutoSave = useCallback((scenario: Scenario) => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveScenario(scenario)
+    }, 2000)
+  }, [saveScenario])
+
+  // ---- Scenario mutations ----
   function updateScenario(id: string, fn: (s: Scenario) => Scenario) {
-    setScenarios((prev) => prev.map((s) => (s.id === id ? fn(s) : s)))
+    setScenarios((prev) => {
+      const updated = prev.map((s) => (s.id === id ? fn(s) : s))
+      const changed = updated.find((s) => s.id === id)
+      if (changed && loadedOnce) triggerAutoSave(changed)
+      return updated
+    })
   }
 
   function addTransfer(direction: "in" | "out") {
@@ -147,11 +261,72 @@ export default function SimulatorPage() {
   function addScenario() {
     const id = crypto.randomUUID().slice(0, 8)
     const letter = String.fromCharCode(65 + scenarios.length) // C, D, E...
-    setScenarios((prev) => [
-      ...prev,
-      { id, name: `Cenario ${letter}`, transfers: [] },
-    ])
+    const newScenario: Scenario = { id, name: `Cenario ${letter}`, transfers: [] }
+    setScenarios((prev) => [...prev, newScenario])
     setActiveTab(id)
+    if (loadedOnce) triggerAutoSave(newScenario)
+  }
+
+  // ---- Rename ----
+  function startRename(scenarioId: string, currentName: string) {
+    setRenamingId(scenarioId)
+    setRenameValue(currentName)
+  }
+
+  function confirmRename(scenarioId: string) {
+    if (renameValue.trim()) {
+      updateScenario(scenarioId, (s) => ({ ...s, name: renameValue.trim() }))
+    }
+    setRenamingId(null)
+  }
+
+  // ---- Delete ----
+  async function handleDeleteScenario(scenarioId: string) {
+    const scenario = scenarios.find((s) => s.id === scenarioId)
+    if (!scenario) return
+
+    if (scenario.dbId) {
+      try {
+        await fetch("/api/simulator", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: scenario.dbId }),
+        })
+      } catch {
+        // continue with local deletion
+      }
+    }
+
+    setScenarios((prev) => {
+      const filtered = prev.filter((s) => s.id !== scenarioId)
+      if (filtered.length === 0) {
+        const fallback: Scenario = { id: crypto.randomUUID().slice(0, 8), name: "Cenario A", transfers: [] }
+        setActiveTab(fallback.id)
+        return [fallback]
+      }
+      if (activeTab === scenarioId) {
+        setActiveTab(filtered[0].id)
+      }
+      return filtered
+    })
+  }
+
+  // ---- Load a saved scenario from dropdown ----
+  function loadSavedScenario(saved: SavedScenario) {
+    const exists = scenarios.find((s) => s.dbId === saved.id)
+    if (exists) {
+      setActiveTab(exists.id)
+    } else {
+      const loaded: Scenario = {
+        id: saved.id,
+        name: saved.name,
+        transfers: (saved.data?.transfers ?? []) as Transfer[],
+        dbId: saved.id,
+      }
+      setScenarios((prev) => [...prev, loaded])
+      setActiveTab(loaded.id)
+    }
+    setShowSavedDropdown(false)
   }
 
   const fin = calcScenarioFinancials(activeScenario.transfers)
@@ -174,32 +349,123 @@ export default function SimulatorPage() {
             &ldquo;E se contratarmos X e vendermos Y?&rdquo; — simule cenarios de transferencia
           </p>
         </div>
-        <Button
-          onClick={addScenario}
-          variant="outline"
-          size="sm"
-          className="text-xs border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-        >
-          <Plus className="w-3.5 h-3.5 mr-1.5" />
-          Novo Cenario
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Save status indicator */}
+          {saveStatus === "saving" && (
+            <span className="flex items-center gap-1 text-xs text-zinc-500">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Salvando...
+            </span>
+          )}
+          {saveStatus === "saved" && (
+            <span className="flex items-center gap-1 text-xs text-emerald-400">
+              <Check className="w-3 h-3" />
+              Salvo automaticamente
+            </span>
+          )}
+
+          {/* Saved scenarios dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <Button
+              onClick={() => setShowSavedDropdown(!showSavedDropdown)}
+              variant="outline"
+              size="sm"
+              className="text-xs border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              <FolderOpen className="w-3.5 h-3.5 mr-1.5" />
+              Cenarios salvos
+              <ChevronDown className="w-3 h-3 ml-1" />
+            </Button>
+            {showSavedDropdown && savedList.length > 0 && (
+              <div className="absolute right-0 top-full mt-1 w-64 rounded-lg border border-zinc-700 bg-zinc-900 shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
+                {savedList.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => loadSavedScenario(s)}
+                    className="w-full text-left px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800 transition-colors"
+                  >
+                    <div className="font-medium">{s.name}</div>
+                    {s.updatedAt && (
+                      <div className="text-zinc-500 text-[10px] mt-0.5">
+                        {new Date(s.updatedAt).toLocaleDateString("pt-BR")}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            {showSavedDropdown && savedList.length === 0 && (
+              <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-zinc-700 bg-zinc-900 shadow-lg z-50 p-3">
+                <p className="text-xs text-zinc-500">Nenhum cenario salvo</p>
+              </div>
+            )}
+          </div>
+
+          <Button
+            onClick={addScenario}
+            variant="outline"
+            size="sm"
+            className="text-xs border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Novo Cenario
+          </Button>
+        </div>
       </div>
 
       {/* Scenario tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {scenarios.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => setActiveTab(s.id)}
-            className={cn(
-              "px-4 py-2 rounded-lg text-xs font-medium transition-all",
-              activeTab === s.id
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                : "bg-zinc-800/30 text-zinc-500 border border-zinc-800 hover:text-zinc-300"
+          <div key={s.id} className="flex items-center gap-0.5 group">
+            {renamingId === s.id ? (
+              <input
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={() => confirmRename(s.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmRename(s.id)
+                  if (e.key === "Escape") setRenamingId(null)
+                }}
+                autoFocus
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 border border-emerald-500/30 text-zinc-100 outline-none w-32"
+              />
+            ) : (
+              <button
+                onClick={() => setActiveTab(s.id)}
+                onDoubleClick={() => startRename(s.id, s.name)}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs font-medium transition-all",
+                  activeTab === s.id
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                    : "bg-zinc-800/30 text-zinc-500 border border-zinc-800 hover:text-zinc-300"
+                )}
+              >
+                {s.name}
+              </button>
             )}
-          >
-            {s.name}
-          </button>
+            {/* Rename / Delete buttons (visible on hover or when active) */}
+            <div className={cn(
+              "flex items-center gap-0.5 transition-opacity",
+              activeTab === s.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )}>
+              <button
+                onClick={() => startRename(s.id, s.name)}
+                className="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+                title="Renomear cenario"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+              {scenarios.length > 1 && (
+                <button
+                  onClick={() => handleDeleteScenario(s.id)}
+                  className="p-1 rounded hover:bg-red-500/10 text-zinc-500 hover:text-red-400"
+                  title="Excluir cenario"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
         ))}
       </div>
 

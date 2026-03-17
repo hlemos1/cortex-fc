@@ -19,9 +19,11 @@ import { PlayerAgentsBar } from "@/components/cortex/PlayerAgentsBar"
 import { PlayerQuickStats } from "@/components/cortex/PlayerQuickStats"
 import { CoachingAssistPanel } from "@/components/cortex/CoachingAssistPanel"
 import { SimilarPlayers } from "@/components/cortex/SimilarPlayers"
+import { WatchlistButton } from "@/components/cortex/WatchlistButton"
 import { ProfileTabs } from "./ProfileTabs"
-import { getPlayerById, getPlayerSeasonStats, getPlayerMatchPerformance, getPlayerTransfers } from "@/db/queries"
+import { getPlayerById, getPlayerSeasonStats, getPlayerMatchPerformance, getPlayerTransfers, isPlayerWatched } from "@/db/queries"
 import { getSimilarPlayers } from "@/db/queries/similar-players"
+import { auth } from "@/auth"
 import { HeroParallax } from "./HeroParallax"
 import {
   formatPlayerForUI,
@@ -39,12 +41,16 @@ export default async function PlayerDetailPage({
 }) {
   const { id } = await params
 
-  const [dbPlayer, seasonStats, matchPerformance, transferHistory, similarPlayers] = await Promise.all([
+  const session = await auth()
+  const currentUserId = session?.user?.id
+
+  const [dbPlayer, seasonStats, matchPerformance, transferHistory, similarPlayers, watched] = await Promise.all([
     getPlayerById(id),
     getPlayerSeasonStats(id),
     getPlayerMatchPerformance(id),
     getPlayerTransfers(id),
     getSimilarPlayers(id),
+    currentUserId ? isPlayerWatched(id, currentUserId) : Promise.resolve(false),
   ])
 
   if (!dbPlayer) {
@@ -158,7 +164,12 @@ export default async function PlayerDetailPage({
             <div className="flex-1">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold gradient-text tracking-tight">{player.name}</h1>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-bold gradient-text tracking-tight">{player.name}</h1>
+                    {currentUserId && (
+                      <WatchlistButton playerId={id} initialWatched={watched} />
+                    )}
+                  </div>
                   <p className="text-sm text-zinc-400 mt-1">{player.position}</p>
                 </div>
                 {latest && (

@@ -4,7 +4,9 @@ import { hasPermission } from "@/lib/rbac";
 import { checkRateLimit, aiRateLimit } from "@/lib/rate-limit";
 import { createAgentRun } from "@/db/queries";
 import { canUseAgent } from "@/lib/feature-gates";
+import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
+import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
 
 export async function POST(req: Request) {
   try {
@@ -39,6 +41,15 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { playerId, proposedFee, proposedSalary, contractYears, sellingClubAsk } = body;
 
+    // Model selection with tier validation
+    const model = body.model || getDefaultModel(session!.tier);
+    if (!canUseModel(session!.tier, model)) {
+      return NextResponse.json(
+        { error: "Model not available for your tier" },
+        { status: 403 }
+      );
+    }
+
     if (!playerId || proposedFee == null || proposedSalary == null || !contractYears || sellingClubAsk == null) {
       return NextResponse.json(
         { error: "playerId, proposedFee, proposedSalary, contractYears e sellingClubAsk sao obrigatorios" },
@@ -54,6 +65,14 @@ export async function POST(req: Request) {
     }
 
     const inputContext = { playerId, proposedFee, proposedSalary, contractYears, sellingClubAsk };
+
+    // Check agent response cache
+    const cacheParams = { playerId, proposedFee, proposedSalary, contractYears, sellingClubAsk };
+    const cached = await getCachedAgentResponse("CFO_MODELER", cacheParams);
+    if (cached) {
+      return NextResponse.json({ data: cached, fromCache: true });
+    }
+
     const startTime = Date.now();
 
     const { runCfo } = await import("@/lib/agents/cfo-agent");
@@ -63,7 +82,7 @@ export async function POST(req: Request) {
 
     let result;
     try {
-      result = await runCfo({ playerId, proposedFee, proposedSalary, contractYears, sellingClubAsk });
+      result = await runCfo({ playerId, proposedFee, proposedSalary, contractYears, sellingClubAsk }, model);
     } finally {
       clearTimeout(timeout);
     }
@@ -74,7 +93,7 @@ export async function POST(req: Request) {
       agentType: "CFO_MODELER",
       inputContext,
       outputResult: result as unknown as Record<string, unknown>,
-      modelUsed: "claude-sonnet-4-20250514",
+      modelUsed: model,
       durationMs,
       success: true,
       userId: session!.userId,
@@ -83,6 +102,9 @@ export async function POST(req: Request) {
       console.error("Failed to log agent run:", err);
       return null;
     });
+
+    // Cache the successful result
+    await setCachedAgentResponse("CFO_MODELER", cacheParams, result, TTL.DAY);
 
     // Emit event for background processing (notifications, cache invalidation, webhooks)
     try {

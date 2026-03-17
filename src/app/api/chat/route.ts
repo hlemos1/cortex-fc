@@ -120,6 +120,88 @@ export async function POST(request: Request) {
       content: m.content,
     }));
 
+    // Check if streaming is requested
+    const url = new URL(request.url);
+    const isStreaming = url.searchParams.get("stream") === "true";
+
+    if (isStreaming) {
+      // SSE streaming response
+      const encoder = new TextEncoder();
+
+      const sseStream = new ReadableStream({
+        async start(controller) {
+          try {
+            const stream = client.messages.stream({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 2048,
+              system: systemPrompt,
+              messages,
+            });
+
+            let fullText = "";
+
+            for await (const event of stream) {
+              if (
+                event.type === "content_block_delta" &&
+                event.delta.type === "text_delta"
+              ) {
+                fullText += event.delta.text;
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+                );
+              }
+            }
+
+            // Get final message for token usage
+            const finalMessage = await stream.finalMessage();
+            const tokensUsed =
+              (finalMessage.usage?.input_tokens || 0) +
+              (finalMessage.usage?.output_tokens || 0);
+
+            // Save assistant message to DB
+            const aiMessage = await addChatMessage({
+              conversationId,
+              role: "assistant",
+              content: fullText,
+              tokensUsed,
+            });
+
+            // Auto-title on first message
+            if (history.length <= 1) {
+              const title =
+                message.length > 50 ? message.slice(0, 47) + "..." : message;
+              await updateConversationTitle(conversationId, title);
+            }
+
+            // Send done event with message ID
+            controller.enqueue(
+              encoder.encode(
+                `event: done\ndata: ${JSON.stringify({ messageId: aiMessage.id, tokensUsed })}\n\n`
+              )
+            );
+            controller.close();
+          } catch (error) {
+            console.error("Chat streaming error:", error);
+            controller.enqueue(
+              encoder.encode(
+                `event: error\ndata: ${JSON.stringify({ message: "Erro ao processar mensagem" })}\n\n`
+              )
+            );
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(sseStream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    }
+
+    // Non-streaming response (default)
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 2048,

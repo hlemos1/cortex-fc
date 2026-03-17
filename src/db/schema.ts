@@ -9,6 +9,7 @@ import {
   uuid,
   boolean,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -394,6 +395,59 @@ export const scoutingTargets = pgTable("scouting_targets", {
 });
 
 // ============================================
+// SCOUTING COMMENTS
+// ============================================
+
+export const scoutingComments = pgTable(
+  "scouting_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    targetId: uuid("target_id")
+      .references(() => scoutingTargets.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id)
+      .notNull(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id)
+      .notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_sc_target").on(table.targetId),
+    index("idx_sc_org").on(table.orgId),
+  ]
+);
+
+// ============================================
+// PLAYER WATCHLIST
+// ============================================
+
+export const playerWatchlist = pgTable(
+  "player_watchlist",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    playerId: uuid("player_id")
+      .references(() => players.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_watchlist_player_user").on(table.playerId, table.userId),
+    index("idx_watchlist_user").on(table.userId),
+  ]
+);
+
+// ============================================
 // REPORTS
 // ============================================
 
@@ -534,6 +588,49 @@ export const auditLogs = pgTable(
 );
 
 // ============================================
+// USER PREFERENCES
+// ============================================
+
+export const userPreferences = pgTable("user_preferences", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  aiModel: text("ai_model").default("claude-sonnet-4-20250514"),
+  maxTokens: integer("max_tokens").default(4096),
+  temperature: real("temperature").default(0.7),
+  notifyContracts: boolean("notify_contracts").default(true),
+  notifyReports: boolean("notify_reports").default(true),
+  notifyScouting: boolean("notify_scouting").default(true),
+  notifyRisk: boolean("notify_risk").default(true),
+  density: text("density").default("normal"),
+  language: text("language").default("pt-BR"),
+  soundEnabled: boolean("sound_enabled").default(false),
+  hapticEnabled: boolean("haptic_enabled").default(true),
+  soundVolume: real("sound_volume").default(0.3),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("idx_prefs_user_org").on(table.userId, table.orgId),
+]);
+
+// ============================================
+// TRANSFER SCENARIOS (Simulator)
+// ============================================
+
+export const transferScenarios = pgTable("transfer_scenarios", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orgId: uuid("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  data: jsonb("data").notNull(),
+  shareToken: text("share_token"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_scenarios_org").on(table.orgId),
+  index("idx_scenarios_user").on(table.userId),
+]);
+
+// ============================================
 // RELATIONS
 // ============================================
 
@@ -616,6 +713,28 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
   conversation: one(chatConversations, {
     fields: [chatMessages.conversationId],
     references: [chatConversations.id],
+  }),
+}));
+
+export const scoutingCommentsRelations = relations(scoutingComments, ({ one }) => ({
+  target: one(scoutingTargets, {
+    fields: [scoutingComments.targetId],
+    references: [scoutingTargets.id],
+  }),
+  user: one(users, {
+    fields: [scoutingComments.userId],
+    references: [users.id],
+  }),
+}));
+
+export const playerWatchlistRelations = relations(playerWatchlist, ({ one }) => ({
+  player: one(players, {
+    fields: [playerWatchlist.playerId],
+    references: [players.id],
+  }),
+  user: one(users, {
+    fields: [playerWatchlist.userId],
+    references: [users.id],
   }),
 }));
 

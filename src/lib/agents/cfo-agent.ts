@@ -57,14 +57,14 @@ Responda EXCLUSIVAMENTE em JSON válido, sem texto adicional:
   "reasoning": "string com análise financeira detalhada em português, incluindo justificativa da recomendação, riscos financeiros, cenários de valorização/desvalorização, e impacto no FFP"
 }`;
 
-export async function runCfo(input: CfoInput): Promise<CfoOutput> {
+export async function runCfo(input: CfoInput, model?: string): Promise<CfoOutput> {
   const userMessage = buildCfoUserMessage(input);
 
   const result = await callAgent<CfoOutput>({
     agentType: "CFO_MODELER",
     systemPrompt: CFO_SYSTEM_PROMPT,
     userMessage,
-    model: "claude-sonnet-4-20250514",
+    model: model || "claude-sonnet-4-20250514",
     maxTokens: 4096,
   });
 

@@ -77,7 +77,8 @@ Responda EXCLUSIVAMENTE em JSON valido, sem texto adicional:
 }`;
 
 export async function runCoachingAssist(
-  input: CoachingAssistInput
+  input: CoachingAssistInput,
+  model?: string
 ): Promise<CoachingAssistOutput> {
   const userMessage = buildCoachingUserMessage(input);
 
@@ -85,7 +86,7 @@ export async function runCoachingAssist(
     agentType: "COACHING_ASSIST",
     systemPrompt: COACHING_SYSTEM_PROMPT,
     userMessage,
-    model: "claude-sonnet-4-20250514",
+    model: model || "claude-sonnet-4-20250514",
     maxTokens: 4096,
   });
 

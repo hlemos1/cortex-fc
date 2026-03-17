@@ -142,6 +142,20 @@ export function ScoutingClient({ scoutingTargets, initialTargets }: Props) {
   const [scoutLoading, setScoutLoading] = useState(false)
   const [scoutError, setScoutError] = useState("")
 
+  // Comments
+  const [commentTargetId, setCommentTargetId] = useState<string | null>(null)
+  const [comments, setComments] = useState<Array<{
+    id: string
+    content: string
+    userName: string
+    userImage: string | null
+    createdAt: string
+    userId: string
+  }>>([])
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const [newComment, setNewComment] = useState("")
+  const [postingComment, setPostingComment] = useState(false)
+
   // Share
   const [shareUrl, setShareUrl] = useState("")
   const [sharing, setSharing] = useState(false)
@@ -275,6 +289,51 @@ export function ScoutingClient({ scoutingTargets, initialTargets }: Props) {
       if (res.ok) {
         const data = await res.json()
         setTargets(data.data ?? [])
+      }
+    } catch {}
+  }
+
+  // ============================================
+  // Comments
+  // ============================================
+
+  async function openComments(targetId: string) {
+    setCommentTargetId(targetId)
+    setCommentsLoading(true)
+    setComments([])
+    try {
+      const res = await fetch(`/api/scouting/comments?targetId=${targetId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setComments(data.data ?? [])
+      }
+    } catch {}
+    setCommentsLoading(false)
+  }
+
+  async function postComment() {
+    if (!commentTargetId || !newComment.trim()) return
+    setPostingComment(true)
+    try {
+      const res = await fetch("/api/scouting/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetId: commentTargetId, content: newComment.trim() }),
+      })
+      if (res.ok) {
+        setNewComment("")
+        // Refresh comments
+        await openComments(commentTargetId)
+      }
+    } catch {}
+    setPostingComment(false)
+  }
+
+  async function removeComment(commentId: string) {
+    try {
+      const res = await fetch(`/api/scouting/comments?id=${commentId}`, { method: "DELETE" })
+      if (res.ok && commentTargetId) {
+        setComments((prev) => prev.filter((c) => c.id !== commentId))
       }
     } catch {}
   }
@@ -772,12 +831,21 @@ export function ScoutingClient({ scoutingTargets, initialTargets }: Props) {
                                   {target.playerName}
                                 </p>
                               </Link>
-                              <button
-                                onClick={() => deleteTarget(target.id)}
-                                className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-all"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => openComments(target.id)}
+                                  className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-emerald-400 transition-all"
+                                  title="Comentarios"
+                                >
+                                  <MessageSquare className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => deleteTarget(target.id)}
+                                  className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-all"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
                             <p className="text-xs text-zinc-500 mt-0.5">
                               {target.playerPosition ?? target.playerCluster} — {target.clubName ?? "—"}
@@ -1176,6 +1244,85 @@ export function ScoutingClient({ scoutingTargets, initialTargets }: Props) {
               </Card>
             </>
           )}
+        </div>
+      )}
+      {/* ============================================ */}
+      {/* COMMENTS PANEL (overlay) */}
+      {/* ============================================ */}
+      {commentTargetId && (
+        <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setCommentTargetId(null)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-md bg-zinc-900 border-l border-zinc-800 shadow-2xl flex flex-col animate-slide-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm font-semibold text-zinc-200">Comentarios</span>
+              </div>
+              <button
+                onClick={() => setCommentTargetId(null)}
+                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Comments list */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {commentsLoading && (
+                <p className="text-xs text-zinc-500 text-center py-8">Carregando...</p>
+              )}
+              {!commentsLoading && comments.length === 0 && (
+                <p className="text-xs text-zinc-500 text-center py-8">Nenhum comentario</p>
+              )}
+              {comments.map((c) => (
+                <div key={c.id} className="group bg-zinc-800/50 rounded-lg p-3 border border-zinc-800/50">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-zinc-300">{c.userName}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-zinc-500">
+                        {new Date(c.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      <button
+                        onClick={() => removeComment(c.id)}
+                        className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-all"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-zinc-400 whitespace-pre-wrap">{c.content}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* New comment input */}
+            <div className="border-t border-zinc-800 p-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Adicionar comentario..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postComment() } }}
+                  className="flex-1 h-9 rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 text-sm text-zinc-200 placeholder:text-zinc-500 outline-none focus:border-emerald-500/50"
+                />
+                <Button
+                  size="sm"
+                  onClick={postComment}
+                  disabled={postingComment || !newComment.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Enviar
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

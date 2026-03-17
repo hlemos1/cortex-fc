@@ -5,6 +5,8 @@ import {
   clubs,
   neuralAnalyses,
   scoutingTargets,
+  scoutingComments,
+  playerWatchlist,
   agentRuns,
   playerMatchStats,
   transfers,
@@ -19,6 +21,8 @@ import {
   chatConversations,
   chatMessages,
   notifications,
+  userPreferences,
+  transferScenarios,
 } from "./schema";
 
 // ============================================
@@ -1273,6 +1277,104 @@ export async function getAgentUsageTimeline(orgId?: string, days = 30) {
   }));
 }
 
+// ============================================
+// TRANSFER SCENARIOS (Simulator)
+// ============================================
+
+export async function getScenarios(orgId: string, userId: string) {
+  return db.query.transferScenarios.findMany({
+    where: and(
+      eq(transferScenarios.orgId, orgId),
+      eq(transferScenarios.userId, userId)
+    ),
+    orderBy: [desc(transferScenarios.updatedAt)],
+  });
+}
+
+export async function createScenario(data: {
+  orgId: string;
+  userId: string;
+  name: string;
+  data: unknown;
+  shareToken?: string;
+}) {
+  const [inserted] = await db
+    .insert(transferScenarios)
+    .values({
+      orgId: data.orgId,
+      userId: data.userId,
+      name: data.name,
+      data: data.data,
+      shareToken: data.shareToken ?? null,
+    })
+    .returning();
+  return inserted;
+}
+
+export async function updateScenario(
+  id: string,
+  userId: string,
+  data: { name?: string; data?: unknown }
+) {
+  const [updated] = await db
+    .update(transferScenarios)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(transferScenarios.id, id), eq(transferScenarios.userId, userId)))
+    .returning();
+  return updated;
+}
+
+export async function deleteScenario(id: string, userId: string) {
+  await db
+    .delete(transferScenarios)
+    .where(and(eq(transferScenarios.id, id), eq(transferScenarios.userId, userId)));
+}
+
+// ============================================
+// USER PREFERENCES
+// ============================================
+
+export async function getUserPreferences(userId: string, orgId: string) {
+  return db.query.userPreferences.findFirst({
+    where: and(
+      eq(userPreferences.userId, userId),
+      eq(userPreferences.orgId, orgId)
+    ),
+  });
+}
+
+export async function upsertUserPreferences(
+  userId: string,
+  orgId: string,
+  data: Partial<Omit<typeof userPreferences.$inferInsert, "id" | "userId" | "orgId">>
+) {
+  const existing = await getUserPreferences(userId, orgId);
+
+  if (existing) {
+    const [updated] = await db
+      .update(userPreferences)
+      .set({ ...data, updatedAt: new Date() })
+      .where(
+        and(
+          eq(userPreferences.userId, userId),
+          eq(userPreferences.orgId, orgId)
+        )
+      )
+      .returning();
+    return updated;
+  }
+
+  const [inserted] = await db
+    .insert(userPreferences)
+    .values({
+      userId,
+      orgId,
+      ...data,
+    })
+    .returning();
+  return inserted;
+}
+
 export async function getScoutingFunnel(orgId?: string) {
   const orgFilter = orgId ? eq(scoutingTargets.orgId, orgId) : undefined;
 
@@ -1320,4 +1422,112 @@ export async function getScoutingFunnel(orgId?: string) {
     { stage: "Aprovados", count: approved.count },
     { stage: "Recusados", count: rejected.count },
   ];
+}
+
+// ============================================
+// SCOUTING COMMENTS
+// ============================================
+
+export async function getScoutingComments(targetId: string) {
+  return db
+    .select({
+      id: scoutingComments.id,
+      targetId: scoutingComments.targetId,
+      userId: scoutingComments.userId,
+      content: scoutingComments.content,
+      createdAt: scoutingComments.createdAt,
+      updatedAt: scoutingComments.updatedAt,
+      userName: users.name,
+      userImage: users.avatarUrl,
+    })
+    .from(scoutingComments)
+    .innerJoin(users, eq(scoutingComments.userId, users.id))
+    .where(eq(scoutingComments.targetId, targetId))
+    .orderBy(scoutingComments.createdAt);
+}
+
+export async function createScoutingComment(data: {
+  targetId: string;
+  userId: string;
+  orgId: string;
+  content: string;
+}) {
+  const [inserted] = await db
+    .insert(scoutingComments)
+    .values({
+      targetId: data.targetId,
+      userId: data.userId,
+      orgId: data.orgId,
+      content: data.content,
+    })
+    .returning();
+  return inserted;
+}
+
+export async function deleteScoutingComment(id: string, userId: string) {
+  const comment = await db.query.scoutingComments.findFirst({
+    where: eq(scoutingComments.id, id),
+    columns: { userId: true },
+  });
+  if (!comment || comment.userId !== userId) return null;
+
+  await db.delete(scoutingComments).where(eq(scoutingComments.id, id));
+  return { deleted: true };
+}
+
+// ============================================
+// PLAYER WATCHLIST
+// ============================================
+
+export async function getWatchlist(userId: string) {
+  return db
+    .select({
+      id: playerWatchlist.id,
+      playerId: playerWatchlist.playerId,
+      note: playerWatchlist.note,
+      createdAt: playerWatchlist.createdAt,
+      playerName: players.name,
+      playerPhoto: players.photoUrl,
+      playerPosition: players.positionCluster,
+      playerNationality: players.nationality,
+      playerMarketValue: players.marketValue,
+      clubName: clubs.name,
+    })
+    .from(playerWatchlist)
+    .innerJoin(players, eq(playerWatchlist.playerId, players.id))
+    .leftJoin(clubs, eq(players.currentClubId, clubs.id))
+    .where(eq(playerWatchlist.userId, userId))
+    .orderBy(desc(playerWatchlist.createdAt));
+}
+
+export async function isPlayerWatched(playerId: string, userId: string): Promise<boolean> {
+  const row = await db.query.playerWatchlist.findFirst({
+    where: and(
+      eq(playerWatchlist.playerId, playerId),
+      eq(playerWatchlist.userId, userId)
+    ),
+    columns: { id: true },
+  });
+  return !!row;
+}
+
+export async function toggleWatchlist(playerId: string, userId: string, orgId: string) {
+  const existing = await db.query.playerWatchlist.findFirst({
+    where: and(
+      eq(playerWatchlist.playerId, playerId),
+      eq(playerWatchlist.userId, userId)
+    ),
+  });
+
+  if (existing) {
+    await db.delete(playerWatchlist).where(eq(playerWatchlist.id, existing.id));
+    return { watched: false };
+  }
+
+  await db.insert(playerWatchlist).values({
+    playerId,
+    userId,
+    orgId,
+  });
+  return { watched: true };
 }

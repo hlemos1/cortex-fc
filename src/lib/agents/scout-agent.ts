@@ -60,14 +60,14 @@ Responda EXCLUSIVAMENTE em JSON válido, sem texto adicional:
 
 Retorne entre 3 e 8 candidatos, ordenados por fitScore decrescente.`;
 
-export async function runScout(input: ScoutInput): Promise<ScoutOutput> {
+export async function runScout(input: ScoutInput, model?: string): Promise<ScoutOutput> {
   const userMessage = buildScoutUserMessage(input);
 
   const result = await callAgent<ScoutOutput>({
     agentType: "SCOUT",
     systemPrompt: SCOUT_SYSTEM_PROMPT,
     userMessage,
-    model: "claude-sonnet-4-20250514",
+    model: model || "claude-sonnet-4-20250514",
     maxTokens: 4096,
   });
 

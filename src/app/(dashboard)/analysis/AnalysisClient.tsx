@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { Activity, Filter, ArrowUpDown, ChevronUp, ChevronDown, Sparkles } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { EmptyStateCTA } from "@/components/cortex/EmptyStateCTA"
 import type { AnalysisUI } from "@/lib/db-transforms"
 import type { CortexDecision } from "@/types/cortex"
+import { useSearchPreferences } from "@/hooks/useSearchPreferences"
 
 type SortField = "date" | "vx" | "rx" | "scn" | "name"
 type SortDir = "asc" | "desc"
@@ -21,11 +22,36 @@ interface Props {
 }
 
 export function AnalysisClient({ analyses }: Props) {
+  const { prefs, loaded: prefsLoaded, setSortField: saveSortField, setSortDir: saveSortDir, setFilter: saveFilter, clearFilters: clearSavedFilters } = useSearchPreferences("analysis")
   const [clubFilter, setClubFilter] = useState("")
   const [positionFilter, setPositionFilter] = useState("")
   const [decisionFilter, setDecisionFilter] = useState("")
   const [sortField, setSortField] = useState<SortField>("date")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
+
+  // Restore preferences from localStorage after mount
+  useEffect(() => {
+    if (!prefsLoaded) return
+    if (prefs.sortField && ["date", "vx", "rx", "scn", "name"].includes(prefs.sortField)) {
+      setSortField(prefs.sortField as SortField)
+    }
+    if (prefs.sortDir) {
+      setSortDir(prefs.sortDir)
+    }
+    if (prefs.filters.club) setClubFilter(prefs.filters.club)
+    if (prefs.filters.position) setPositionFilter(prefs.filters.position)
+    if (prefs.filters.decision) setDecisionFilter(prefs.filters.decision)
+  }, [prefsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save preferences on change
+  useEffect(() => {
+    if (!prefsLoaded) return
+    saveSortField(sortField)
+    saveSortDir(sortDir)
+    saveFilter("club", clubFilter)
+    saveFilter("position", positionFilter)
+    saveFilter("decision", decisionFilter)
+  }, [sortField, sortDir, clubFilter, positionFilter, decisionFilter, prefsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const clubs = useMemo(
     () => [...new Set(analyses.map((a) => a.player?.club).filter(Boolean))].sort() as string[],
@@ -169,7 +195,7 @@ export function AnalysisClient({ analyses }: Props) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setClubFilter(""); setPositionFilter(""); setDecisionFilter("") }}
+              onClick={() => { setClubFilter(""); setPositionFilter(""); setDecisionFilter(""); clearSavedFilters() }}
               className="text-zinc-500 hover:text-emerald-400 text-xs min-h-[36px] hover:bg-emerald-500/10 transition-all"
             >
               <Filter className="w-3 h-3 mr-1" />

@@ -13,12 +13,15 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AdaptiveModal } from "@/components/ui/adaptive-modal"
+import { ModelSelector } from "@/components/cortex/ModelSelector"
+import { getAvailableModels, getDefaultModel } from "@/lib/ai-models"
 
 interface AgentLaunchModalProps {
   isOpen: boolean
   onClose: () => void
   agentType: string
   agentName: string
+  orgTier?: string
 }
 
 interface PlayerResult {
@@ -43,7 +46,9 @@ const STEPS = [
   { key: "processing", label: "Processando resultado" },
 ]
 
-export function AgentLaunchModal({ isOpen, onClose, agentType, agentName }: AgentLaunchModalProps) {
+export function AgentLaunchModal({ isOpen, onClose, agentType, agentName, orgTier = "free" }: AgentLaunchModalProps) {
+  const availableModels = getAvailableModels(orgTier)
+  const [selectedModel, setSelectedModel] = useState(() => getDefaultModel(orgTier))
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<PlayerResult[]>([])
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerResult | null>(null)
@@ -110,6 +115,7 @@ export function AgentLaunchModal({ isOpen, onClose, agentType, agentName }: Agen
     try {
       const body: Record<string, unknown> = {
         playerId: selectedPlayer.id,
+        model: selectedModel,
       }
 
       if (agentType === "BOARD_ADVISOR" || agentType === "CFO_MODELER") {
@@ -153,6 +159,7 @@ export function AgentLaunchModal({ isOpen, onClose, agentType, agentName }: Agen
     setSearchResults([])
     setSelectedPlayer(null)
     setContext("")
+    setSelectedModel(getDefaultModel(orgTier))
     setLoading(false)
     setSuccess(false)
     setError("")
@@ -171,6 +178,18 @@ export function AgentLaunchModal({ isOpen, onClose, agentType, agentName }: Agen
         <div className="p-5 space-y-5">
           {!success && !error ? (
             <>
+              {/* Model Selector */}
+              <div>
+                <label className="text-xs text-zinc-500 font-medium mb-1.5 block">
+                  Selecionar modelo
+                </label>
+                <ModelSelector
+                  models={availableModels}
+                  selectedModel={selectedModel}
+                  onSelect={setSelectedModel}
+                />
+              </div>
+
               {/* Player Selector */}
               <div>
                 <label className="text-xs text-zinc-500 font-medium mb-1.5 block">

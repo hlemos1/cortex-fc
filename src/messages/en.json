@@ -15,6 +15,7 @@
     "viewAll": "View all",
     "noResults": "No results",
     "noResultsFor": "No results for \"{query}\"",
+    "clearFilters": "Clear filters",
     "processing": "Processing...",
     "export": "Export",
     "searchPlaceholder": "Search page, action or player...",
@@ -122,7 +123,10 @@
     "explore": "Explore",
     "compare": "Compare",
     "noPlayers": "No players found",
-    "addFirst": "Import players from the global database"
+    "addFirst": "Import players from the global database",
+    "watchlist": "Watchlist",
+    "addToWatchlist": "Add to watchlist",
+    "removeFromWatchlist": "Remove from watchlist"
   },
   "player": {
     "overview": "Overview",
@@ -171,7 +175,10 @@
     "closed": "Closed",
     "discarded": "Discarded",
     "addTarget": "Add Target",
-    "priority": "Priority"
+    "priority": "Priority",
+    "comments": "Comments",
+    "addComment": "Add comment",
+    "noComments": "No comments yet"
   },
   "notifications": {
     "title": "Notifications",
@@ -320,6 +327,16 @@
     "dismiss": "Later",
     "updateAvailable": "Update available",
     "updateAction": "Update"
+  },
+  "models": {
+    "selectModel": "Select model",
+    "modelRestricted": "Model not available on your plan"
+  },
+  "simulator": {
+    "savedScenarios": "Saved scenarios",
+    "autoSaved": "Auto-saved",
+    "deleteScenario": "Delete scenario",
+    "renameScenario": "Rename scenario"
   },
   "auth": {
     "login": "Sign in",

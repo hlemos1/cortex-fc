@@ -5,7 +5,9 @@ import { checkRateLimit, aiRateLimit } from "@/lib/rate-limit";
 import { createAgentRun } from "@/db/queries";
 import { isValidUUID } from "@/lib/validation";
 import { canUseAgent } from "@/lib/feature-gates";
+import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
+import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
 
 export async function POST(req: Request) {
   try {
@@ -55,6 +57,15 @@ export async function POST(req: Request) {
       targetClubLeague,
     } = body;
 
+    // Model selection with tier validation
+    const model = body.model || getDefaultModel(session!.tier);
+    if (!canUseModel(session!.tier, model)) {
+      return NextResponse.json(
+        { error: "Model not available for your tier" },
+        { status: 403 }
+      );
+    }
+
     if (!playerId || !clubContextId || !playerName || !position) {
       return NextResponse.json(
         { error: "playerId, clubContextId, playerName, and position are required" },
@@ -67,6 +78,13 @@ export async function POST(req: Request) {
         { error: "playerId and clubContextId must be valid UUIDs" },
         { status: 400 }
       );
+    }
+
+    // Check agent response cache
+    const cacheParams = { playerId, clubContextId };
+    const cached = await getCachedAgentResponse("ORACLE", cacheParams);
+    if (cached) {
+      return NextResponse.json({ data: cached, fromCache: true });
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -112,7 +130,7 @@ export async function POST(req: Request) {
         contractUntil: contractEnd,
         buyingClubName: targetClubName ?? "",
         buyingClubLeague: targetClubLeague ?? "",
-      });
+      }, model);
     } finally {
       clearTimeout(timeout);
     }
@@ -124,7 +142,7 @@ export async function POST(req: Request) {
       agentType: "ORACLE",
       inputContext,
       outputResult: result as unknown as Record<string, unknown>,
-      modelUsed: "claude-sonnet-4-20250514",
+      modelUsed: model,
       durationMs,
       success: true,
       userId: session!.userId,
@@ -134,6 +152,9 @@ export async function POST(req: Request) {
       console.error("Failed to log agent run:", err);
       return null;
     });
+
+    // Cache the successful result
+    await setCachedAgentResponse("ORACLE", cacheParams, result, TTL.DAY);
 
     // Emit event for background processing (notifications, cache invalidation, webhooks)
     try {

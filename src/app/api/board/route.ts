@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/rbac";
 import { checkRateLimit, aiRateLimit } from "@/lib/rate-limit";
 import { createAgentRun } from "@/db/queries";
 import { canUseAgent } from "@/lib/feature-gates";
+import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
 
 export async function POST(req: Request) {
@@ -51,6 +52,15 @@ export async function POST(req: Request) {
       additionalContext,
     } = body;
 
+    // Model selection with tier validation
+    const model = body.model || getDefaultModel(session!.tier);
+    if (!canUseModel(session!.tier, model)) {
+      return NextResponse.json(
+        { error: "Model not available for your tier" },
+        { status: 403 }
+      );
+    }
+
     if (!clubName || currentBudget == null || salaryCap == null || !strategicGoals || !currentSquadAssessment || !windowType || !leagueContext) {
       return NextResponse.json(
         { error: "clubName, currentBudget, salaryCap, strategicGoals, currentSquadAssessment, windowType e leagueContext sao obrigatorios" },
@@ -87,7 +97,7 @@ export async function POST(req: Request) {
         competitorsActivity,
         financialConstraints,
         additionalContext,
-      });
+      }, model);
     } finally {
       clearTimeout(timeout);
     }
@@ -98,7 +108,7 @@ export async function POST(req: Request) {
       agentType: "BOARD_ADVISOR",
       inputContext,
       outputResult: result as unknown as Record<string, unknown>,
-      modelUsed: "claude-sonnet-4-20250514",
+      modelUsed: model,
       durationMs,
       success: true,
       userId: session!.userId,

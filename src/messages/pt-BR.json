@@ -15,6 +15,7 @@
     "viewAll": "Ver todos",
     "noResults": "Nenhum resultado",
     "noResultsFor": "Nenhum resultado para \"{query}\"",
+    "clearFilters": "Limpar filtros",
     "processing": "Processando...",
     "export": "Exportar",
     "searchPlaceholder": "Buscar pagina, acao ou jogador...",
@@ -122,7 +123,10 @@
     "explore": "Explorar",
     "compare": "Comparar",
     "noPlayers": "Nenhum jogador encontrado",
-    "addFirst": "Importe jogadores do banco mundial"
+    "addFirst": "Importe jogadores do banco mundial",
+    "watchlist": "Favoritos",
+    "addToWatchlist": "Adicionar aos favoritos",
+    "removeFromWatchlist": "Remover dos favoritos"
   },
   "player": {
     "overview": "Visao Geral",
@@ -171,7 +175,10 @@
     "closed": "Fechado",
     "discarded": "Descartado",
     "addTarget": "Adicionar Alvo",
-    "priority": "Prioridade"
+    "priority": "Prioridade",
+    "comments": "Comentarios",
+    "addComment": "Adicionar comentario",
+    "noComments": "Nenhum comentario"
   },
   "notifications": {
     "title": "Notificacoes",
@@ -320,6 +327,16 @@
     "dismiss": "Depois",
     "updateAvailable": "Atualizacao disponivel",
     "updateAction": "Atualizar"
+  },
+  "models": {
+    "selectModel": "Selecionar modelo",
+    "modelRestricted": "Modelo indisponivel no seu plano"
+  },
+  "simulator": {
+    "savedScenarios": "Cenarios salvos",
+    "autoSaved": "Salvo automaticamente",
+    "deleteScenario": "Excluir cenario",
+    "renameScenario": "Renomear cenario"
   },
   "auth": {
     "login": "Entrar",

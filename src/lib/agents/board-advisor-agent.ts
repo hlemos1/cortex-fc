@@ -97,7 +97,8 @@ Responda EXCLUSIVAMENTE em JSON válido, sem texto adicional:
 }`;
 
 export async function runBoardAdvisor(
-  input: BoardAdvisorInput
+  input: BoardAdvisorInput,
+  model?: string
 ): Promise<BoardAdvisorOutput> {
   const userMessage = buildBoardAdvisorUserMessage(input);
 
@@ -105,7 +106,7 @@ export async function runBoardAdvisor(
     agentType: "BOARD_ADVISOR",
     systemPrompt: BOARD_ADVISOR_SYSTEM_PROMPT,
     userMessage,
-    model: "claude-sonnet-4-20250514",
+    model: model || "claude-sonnet-4-20250514",
     maxTokens: 4096,
   });
 

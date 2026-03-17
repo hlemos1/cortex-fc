@@ -67,14 +67,14 @@ Responda EXCLUSIVAMENTE em JSON válido, sem texto adicional:
   "comparables": ["transferências históricas similares para referência"]
 }`;
 
-export async function runOracle(input: OracleInput): Promise<OracleOutput> {
+export async function runOracle(input: OracleInput, model?: string): Promise<OracleOutput> {
   const userMessage = buildOracleUserMessage(input);
 
   const result = await callAgent<OracleOutput>({
     agentType: "ORACLE",
     systemPrompt: ORACLE_SYSTEM_PROMPT,
     userMessage,
-    model: "claude-sonnet-4-20250514",
+    model: model || "claude-sonnet-4-20250514",
     maxTokens: 4096,
   });
 
@@ -127,7 +127,8 @@ export async function runOracleWithPlayerData(
     buyingClubLeague: string;
     buyingClubBudget?: number;
     squadContext?: string;
-  }
+  },
+  model?: string
 ): Promise<OracleOutput> {
   const userMessage = `## JOGADOR EM ANÁLISE
 - Nome: ${input.playerName}
@@ -159,7 +160,7 @@ Analise todos os dados acima usando a metodologia CORTEX FC e emita o parecer OR
     agentType: "ORACLE",
     systemPrompt: ORACLE_SYSTEM_PROMPT,
     userMessage,
-    model: "claude-sonnet-4-20250514",
+    model: model || "claude-sonnet-4-20250514",
     maxTokens: 4096,
   });
 

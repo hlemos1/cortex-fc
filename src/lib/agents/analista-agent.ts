@@ -91,7 +91,8 @@ Responda EXCLUSIVAMENTE em JSON válido, sem texto adicional:
 }`;
 
 export async function runAnalista(
-  input: AnalistaInput
+  input: AnalistaInput,
+  model?: string
 ): Promise<AnalistaOutput> {
   const userMessage = buildAnalistaUserMessage(input);
 
@@ -99,7 +100,7 @@ export async function runAnalista(
     agentType: "ANALISTA",
     systemPrompt: ANALISTA_SYSTEM_PROMPT,
     userMessage,
-    model: "claude-sonnet-4-20250514",
+    model: model || "claude-sonnet-4-20250514",
     maxTokens: 4096,
   });
 

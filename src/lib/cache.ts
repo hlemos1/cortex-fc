@@ -9,6 +9,7 @@
  */
 
 import { Redis } from "@upstash/redis";
+import crypto from "crypto";
 
 const hasRedis =
   !!process.env.UPSTASH_REDIS_REST_URL &&
@@ -119,3 +120,77 @@ export const TTL = {
   HOUR: 3600,      // 1 hour — static-ish data
   DAY: 86400,      // 1 day — rarely changes
 } as const;
+
+// ============================================
+// AGENT RESPONSE CACHE
+// ============================================
+
+/**
+ * Generate a deterministic cache key from agent type + params.
+ * Uses SHA-256 truncated to 16 hex chars for compact, collision-resistant keys.
+ */
+function agentCacheKey(
+  agentType: string,
+  params: Record<string, unknown>
+): string {
+  const hash = crypto
+    .createHash("sha256")
+    .update(JSON.stringify({ agentType, ...params }))
+    .digest("hex")
+    .slice(0, 16);
+  return `agent:response:${agentType}:${hash}`;
+}
+
+/**
+ * Get a cached agent response.
+ * Returns null on cache miss or if Redis is unavailable.
+ */
+export async function getCachedAgentResponse<T>(
+  agentType: string,
+  params: Record<string, unknown>
+): Promise<T | null> {
+  if (!redis) return null;
+  try {
+    const key = agentCacheKey(agentType, params);
+    const cached = await redis.get(key);
+    if (!cached) return null;
+    return (typeof cached === "string" ? JSON.parse(cached) : cached) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cache an agent response with a TTL.
+ * Defaults to 1 day TTL since agent analyses don't change often.
+ */
+export async function setCachedAgentResponse(
+  agentType: string,
+  params: Record<string, unknown>,
+  result: unknown,
+  ttlSeconds: number = TTL.DAY
+): Promise<void> {
+  if (!redis) return;
+  try {
+    const key = agentCacheKey(agentType, params);
+    await redis.set(key, JSON.stringify(result), { ex: ttlSeconds });
+  } catch {
+    // Silently fail — cache write should never break the main flow
+  }
+}
+
+/**
+ * Invalidate a specific agent response cache entry.
+ */
+export async function invalidateAgentCache(
+  agentType: string,
+  params: Record<string, unknown>
+): Promise<void> {
+  if (!redis) return;
+  try {
+    const key = agentCacheKey(agentType, params);
+    await redis.del(key);
+  } catch {
+    // Silently fail
+  }
+}

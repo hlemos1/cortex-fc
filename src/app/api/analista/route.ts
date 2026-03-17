@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/rbac";
 import { runAnalista } from "@/lib/agents/analista-agent";
 import { createAgentRun } from "@/db/queries";
 import type { AnalistaInput } from "@/types/cortex";
+import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
 
 export async function POST(request: Request) {
@@ -24,6 +25,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+
+    // Model selection with tier validation
+    const model = body.model || getDefaultModel(session!.tier);
+    if (!canUseModel(session!.tier, model)) {
+      return NextResponse.json(
+        { error: "Model not available for your tier" },
+        { status: 403 }
+      );
+    }
 
     if (!body.matchId || typeof body.matchId !== "string") {
       return NextResponse.json({ error: "matchId obrigatorio" }, { status: 400 });
@@ -46,7 +56,7 @@ export async function POST(request: Request) {
     };
 
     const start = Date.now();
-    const result = await runAnalista(input);
+    const result = await runAnalista(input, model);
     const durationMs = Date.now() - start;
 
     // Log agent run
@@ -54,7 +64,7 @@ export async function POST(request: Request) {
       agentType: "ANALISTA",
       inputContext: input as unknown as Record<string, unknown>,
       outputResult: result as unknown as Record<string, unknown>,
-      modelUsed: "claude-sonnet-4-20250514",
+      modelUsed: model,
       durationMs,
       success: true,
       userId: session!.userId,

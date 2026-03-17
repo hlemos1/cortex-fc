@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import {
   Settings,
@@ -17,6 +17,7 @@ import {
   Crown,
   Save,
   Sparkles,
+  Loader2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -28,27 +29,131 @@ import { LanguageSection } from "./LanguageSection"
 import { DensitySection } from "./DensitySection"
 import { SoundSection } from "./SoundSection"
 import { OfflineDataManager } from "@/components/cortex/OfflineDataManager"
+import { useToast } from "@/components/ui/toast"
+
+interface UserPrefs {
+  aiModel: string
+  maxTokens: number
+  temperature: number
+  notifyContracts: boolean
+  notifyReports: boolean
+  notifyScouting: boolean
+  notifyRisk: boolean
+  density: string
+  language: string
+  soundEnabled: boolean
+  hapticEnabled: boolean
+  soundVolume: number
+}
+
+const DEFAULT_PREFS: UserPrefs = {
+  aiModel: "claude-sonnet-4-20250514",
+  maxTokens: 4096,
+  temperature: 0.7,
+  notifyContracts: true,
+  notifyReports: true,
+  notifyScouting: true,
+  notifyRisk: true,
+  density: "normal",
+  language: "pt-BR",
+  soundEnabled: false,
+  hapticEnabled: true,
+  soundVolume: 0.3,
+}
 
 export default function SettingsPage() {
-  const [claudeModel, setClaudeModel] = useState("claude-sonnet-4-20250514")
-  const [maxTokens, setMaxTokens] = useState(4096)
-  const [temperature, setTemperature] = useState(0.7)
+  const [prefs, setPrefs] = useState<UserPrefs>(DEFAULT_PREFS)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const { toast } = useToast()
 
-  const [notifications, setNotifications] = useState({
-    contractAlerts: true,
-    newReports: true,
-    scoutingUpdates: false,
-    riskAlerts: true,
-  })
-
-  function toggleNotification(key: keyof typeof notifications) {
-    setNotifications((prev) => ({ ...prev, [key]: !prev[key] }))
+  // Derived state for backward-compat
+  const claudeModel = prefs.aiModel
+  const maxTokens = prefs.maxTokens
+  const temperature = prefs.temperature
+  const notifications = {
+    contractAlerts: prefs.notifyContracts,
+    newReports: prefs.notifyReports,
+    scoutingUpdates: prefs.notifyScouting,
+    riskAlerts: prefs.notifyRisk,
   }
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  // Load preferences on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/settings")
+        if (res.ok) {
+          const json = await res.json()
+          if (json.data) {
+            setPrefs((prev) => ({ ...prev, ...json.data }))
+          }
+        }
+      } catch {
+        // silently fall back to defaults
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  const updatePref = useCallback(<K extends keyof UserPrefs>(key: K, value: UserPrefs[K]) => {
+    setPrefs((prev) => ({ ...prev, [key]: value }))
+    setSaved(false)
+  }, [])
+
+  function toggleNotification(key: "contractAlerts" | "newReports" | "scoutingUpdates" | "riskAlerts") {
+    const map: Record<string, keyof UserPrefs> = {
+      contractAlerts: "notifyContracts",
+      newReports: "notifyReports",
+      scoutingUpdates: "notifyScouting",
+      riskAlerts: "notifyRisk",
+    }
+    const prefKey = map[key]
+    updatePref(prefKey, !prefs[prefKey])
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aiModel: prefs.aiModel,
+          maxTokens: prefs.maxTokens,
+          temperature: prefs.temperature,
+          notifyContracts: prefs.notifyContracts,
+          notifyReports: prefs.notifyReports,
+          notifyScouting: prefs.notifyScouting,
+          notifyRisk: prefs.notifyRisk,
+          density: prefs.density,
+          language: prefs.language,
+          soundEnabled: prefs.soundEnabled,
+          hapticEnabled: prefs.hapticEnabled,
+          soundVolume: prefs.soundVolume,
+        }),
+      })
+
+      if (res.ok) {
+        setSaved(true)
+        toast({ type: "success", title: "Preferencias salvas com sucesso" })
+        setTimeout(() => setSaved(false), 2000)
+      } else {
+        const json = await res.json().catch(() => ({}))
+        toast({
+          type: "error",
+          title: "Erro ao salvar",
+          description: json.error ?? "Tente novamente",
+        })
+      }
+    } catch {
+      toast({ type: "error", title: "Erro de conexao", description: "Verifique sua rede" })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -66,13 +171,19 @@ export default function SettingsPage() {
         </div>
         <Button
           onClick={handleSave}
+          disabled={saving}
           className={`transition-all duration-300 shadow-lg ${
             saved
               ? "bg-emerald-500 hover:bg-emerald-500 text-white shadow-emerald-500/20 scale-105"
               : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-900/20 hover:-translate-y-0.5"
           }`}
         >
-          {saved ? (
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Salvando...
+            </>
+          ) : saved ? (
             <>
               <Check className="w-4 h-4 mr-2 animate-scale-in" />
               Salvo!
@@ -86,6 +197,12 @@ export default function SettingsPage() {
         </Button>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+          <span className="ml-2 text-sm text-zinc-500">Carregando preferencias...</span>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Idioma / Language */}
         <LanguageSection />
@@ -228,7 +345,7 @@ export default function SettingsPage() {
               </Label>
               <select
                 value={claudeModel}
-                onChange={(e) => setClaudeModel(e.target.value)}
+                onChange={(e) => updatePref("aiModel", e.target.value)}
                 className="w-full h-9 rounded-lg border border-zinc-700/40 bg-zinc-800/40 px-3 text-sm text-zinc-300 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 font-mono transition-all"
               >
                 <option value="claude-sonnet-4-20250514">claude-sonnet-4-20250514</option>
@@ -251,7 +368,7 @@ export default function SettingsPage() {
                 max={8192}
                 step={256}
                 value={maxTokens}
-                onChange={(e) => setMaxTokens(Number(e.target.value))}
+                onChange={(e) => updatePref("maxTokens", Number(e.target.value))}
                 className="w-full h-1.5 rounded-full appearance-none bg-zinc-700/50 accent-emerald-500 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-emerald-500/30 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-emerald-400"
               />
               <div className="flex justify-between text-xs text-zinc-500 font-mono">
@@ -274,7 +391,7 @@ export default function SettingsPage() {
                 max={1}
                 step={0.1}
                 value={temperature}
-                onChange={(e) => setTemperature(Number(e.target.value))}
+                onChange={(e) => updatePref("temperature", Number(e.target.value))}
                 className="w-full h-1.5 rounded-full appearance-none bg-zinc-700/50 accent-emerald-500 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-emerald-500/30 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-emerald-400"
               />
               <div className="flex justify-between text-xs text-zinc-500 font-mono">
@@ -460,6 +577,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+      )}
     </div>
   )
 }

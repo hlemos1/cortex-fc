@@ -4,7 +4,9 @@ import { canUseAgent } from "@/lib/feature-gates";
 import { runScout } from "@/lib/agents/scout-agent";
 import { createAgentRun } from "@/db/queries";
 import type { ScoutInput } from "@/types/cortex";
+import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
+import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
 
 const VALID_POSITIONS = ["GK", "CB", "FB", "DM", "CM", "AM", "W", "ST"];
 
@@ -21,6 +23,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+
+    // Model selection with tier validation
+    const model = body.model || getDefaultModel(session!.tier);
+    if (!canUseModel(session!.tier, model)) {
+      return NextResponse.json(
+        { error: "Model not available for your tier" },
+        { status: 403 }
+      );
+    }
 
     // Validate input
     if (!body.position || !VALID_POSITIONS.includes(body.position)) {
@@ -48,18 +59,28 @@ export async function POST(request: Request) {
       mustHaveTraits: Array.isArray(body.mustHaveTraits) ? body.mustHaveTraits : undefined,
     };
 
-    const result = await runScout(input);
+    // Check agent response cache
+    const cacheParams = input as unknown as Record<string, unknown>;
+    const cached = await getCachedAgentResponse("SCOUT", cacheParams);
+    if (cached) {
+      return NextResponse.json({ data: cached, fromCache: true });
+    }
+
+    const result = await runScout(input, model);
 
     // Log agent run
     const agentRun = await createAgentRun({
       agentType: "SCOUT",
       inputContext: input as unknown as Record<string, unknown>,
       outputResult: result as unknown as Record<string, unknown>,
-      modelUsed: "claude-sonnet-4-20250514",
+      modelUsed: model,
       success: true,
       userId: session!.userId,
       orgId: session!.orgId,
     }).catch(() => null);
+
+    // Cache the successful result
+    await setCachedAgentResponse("SCOUT", cacheParams, result, TTL.DAY);
 
     // Emit event for background processing (notifications, cache invalidation, webhooks)
     try {
