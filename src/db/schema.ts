@@ -114,6 +114,7 @@ export const apiKeys = pgTable(
   (table) => [
     index("idx_ak_hash").on(table.keyHash),
     index("idx_ak_org").on(table.orgId),
+    index("idx_apikeys_active_expires").on(table.isActive, table.expiresAt),
   ]
 );
 
@@ -239,18 +240,24 @@ export const players = pgTable(
   ]
 );
 
-export const transfers = pgTable("transfers", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  playerId: uuid("player_id")
-    .references(() => players.id)
-    .notNull(),
-  fromClubId: uuid("from_club_id").references(() => clubs.id),
-  toClubId: uuid("to_club_id").references(() => clubs.id),
-  fee: real("fee"), // millions EUR
-  transferDate: timestamp("transfer_date").notNull(),
-  transferType: text("transfer_type"), // permanent, loan, free, swap
-  contractYears: integer("contract_years"),
-});
+export const transfers = pgTable(
+  "transfers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    playerId: uuid("player_id")
+      .references(() => players.id)
+      .notNull(),
+    fromClubId: uuid("from_club_id").references(() => clubs.id),
+    toClubId: uuid("to_club_id").references(() => clubs.id),
+    fee: real("fee"), // millions EUR
+    transferDate: timestamp("transfer_date").notNull(),
+    transferType: text("transfer_type"), // permanent, loan, free, swap
+    contractYears: integer("contract_years"),
+  },
+  (table) => [
+    index("idx_transfers_date").on(table.transferDate),
+  ]
+);
 
 // ============================================
 // MATCH DATA
@@ -362,6 +369,7 @@ export const neuralAnalyses = pgTable(
     // Meta
     analystId: uuid("analyst_id").references(() => users.id),
     isPublished: boolean("is_published").default(false),
+    deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -390,6 +398,7 @@ export const scoutingTargets = pgTable("scouting_targets", {
   targetPrice: real("target_price"),
   analysisId: uuid("analysis_id").references(() => neuralAnalyses.id),
   addedBy: uuid("added_by").references(() => users.id),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -451,19 +460,27 @@ export const playerWatchlist = pgTable(
 // REPORTS
 // ============================================
 
-export const reports = pgTable("reports", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: text("title").notNull(),
-  type: text("type").notNull(), // weekly_newsletter, player_report, squad_analysis, scouting_report
-  orgId: uuid("org_id").references(() => organizations.id).notNull(),
-  content: jsonb("content"), // structured report data
-  htmlContent: text("html_content"),
-  pdfUrl: text("pdf_url"),
-  isPublished: boolean("is_published").default(false),
-  publishedAt: timestamp("published_at"),
-  createdBy: uuid("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    type: text("type").notNull(), // weekly_newsletter, player_report, squad_analysis, scouting_report
+    orgId: uuid("org_id").references(() => organizations.id).notNull(),
+    content: jsonb("content"), // structured report data
+    htmlContent: text("html_content"),
+    pdfUrl: text("pdf_url"),
+    isPublished: boolean("is_published").default(false),
+    publishedAt: timestamp("published_at"),
+    createdBy: uuid("created_by").references(() => users.id),
+    deletedAt: timestamp("deleted_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_reports_published").on(table.publishedAt),
+    index("idx_reports_type").on(table.type),
+  ]
+);
 
 // ============================================
 // AGENT RUNS (Audit log)
@@ -488,6 +505,7 @@ export const agentRuns = pgTable(
   (table) => [
     index("idx_ar_agent").on(table.agentType),
     index("idx_ar_created").on(table.createdAt),
+    index("idx_agentruns_org_created").on(table.orgId, table.createdAt),
   ]
 );
 
