@@ -237,6 +237,7 @@ export async function createApiKey(data: {
   name: string;
   createdBy: string;
   rateLimitPerMin?: number;
+  scopes?: string[];
   expiresAt?: Date;
 }) {
   const [inserted] = await db
@@ -248,6 +249,7 @@ export async function createApiKey(data: {
       name: data.name,
       createdBy: data.createdBy,
       rateLimitPerMin: data.rateLimitPerMin ?? 60,
+      scopes: data.scopes ?? ["read"],
       expiresAt: data.expiresAt ?? null,
     })
     .returning();

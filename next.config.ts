@@ -11,6 +11,25 @@ const withSerwist = withSerwistInit({
   disable: process.env.NODE_ENV === "development",
 });
 
+const isProduction = process.env.NODE_ENV === "production";
+
+const cspDirectives = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://vercel.live",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.googleusercontent.com https://media.api-sports.io https://*.vercel-storage.com",
+  "font-src 'self' data:",
+  "connect-src 'self' https://api.stripe.com https://*.upstash.io https://*.sentry.io wss://*.sentry.io",
+  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  ...(isProduction ? ["upgrade-insecure-requests"] : []),
+];
+
+const contentSecurityPolicy = cspDirectives.join("; ");
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -30,6 +49,8 @@ const nextConfig: NextConfig = {
         { key: "X-DNS-Prefetch-Control", value: "on" },
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        { key: "Content-Security-Policy", value: contentSecurityPolicy },
+        { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
       ],
     },
     {

@@ -1,6 +1,7 @@
 import { auth } from "@/auth"
 import { NextResponse } from "next/server"
 import { apiRateLimit, checkRateLimit } from "@/lib/rate-limit"
+import { createRequestLogger } from "@/lib/logger"
 
 const ALLOWED_ORIGINS = [
   "https://cortex-fc.vercel.app",
@@ -8,7 +9,21 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
 ]
 
+// Paths that should not be logged
+const SKIP_LOG_PATHS = ["/api/health", "/_next/", "/favicon.ico", "/sw.js"]
+
+function shouldLogRequest(pathname: string): boolean {
+  return !SKIP_LOG_PATHS.some((p) => pathname.startsWith(p))
+}
+
+function addRequestIdHeader(response: NextResponse, requestId: string): NextResponse {
+  response.headers.set("X-Request-Id", requestId)
+  return response
+}
+
 export default auth(async (req) => {
+  const start = Date.now()
+  const requestId = crypto.randomUUID()
   const { pathname } = req.nextUrl
   const isLoggedIn = !!req.auth
   const isApiRoute = pathname.startsWith("/api/")
@@ -16,10 +31,22 @@ export default auth(async (req) => {
   const isRegisterRoute = pathname.startsWith("/api/register")
   const isPublicPage = pathname === "/" || pathname === "/pricing" || pathname.startsWith("/termos") || pathname.startsWith("/privacidade")
 
+  const log = createRequestLogger(requestId, {
+    path: pathname,
+    method: req.method,
+  })
+
+  if (shouldLogRequest(pathname)) {
+    log.info("Request started", {
+      userAgent: req.headers.get("user-agent") ?? undefined,
+    })
+  }
+
   // CORS headers for API routes
   if (isApiRoute) {
     const origin = req.headers.get("origin") ?? ""
     const response = NextResponse.next()
+    response.headers.set("X-Request-Id", requestId)
 
     if (ALLOWED_ORIGINS.includes(origin) || origin.endsWith(".vercel.app")) {
       response.headers.set("Access-Control-Allow-Origin", origin)
@@ -38,32 +65,51 @@ export default auth(async (req) => {
   }
 
   // Allow auth and register routes through
-  if (isAuthRoute || isRegisterRoute) return NextResponse.next()
+  if (isAuthRoute || isRegisterRoute) {
+    const response = NextResponse.next()
+    return addRequestIdHeader(response, requestId)
+  }
 
   // Allow public pages
-  if (isPublicPage) return NextResponse.next()
+  if (isPublicPage) {
+    const response = NextResponse.next()
+    return addRequestIdHeader(response, requestId)
+  }
 
   // Rate limit API routes
   if (isApiRoute) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous"
     const { success } = await checkRateLimit(apiRateLimit, ip)
     if (!success) {
-      return NextResponse.json(
+      log.warn("Rate limited", { statusCode: 429, duration: Date.now() - start })
+      const response = NextResponse.json(
         { error: "Too many requests. Try again later." },
         { status: 429 }
       )
+      return addRequestIdHeader(response, requestId)
     }
   }
 
   // Require auth for protected routes
   if (!isLoggedIn) {
     if (isApiRoute) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      log.warn("Unauthorized request", { statusCode: 401, duration: Date.now() - start })
+      const response = NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return addRequestIdHeader(response, requestId)
     }
     return NextResponse.redirect(new URL("/login", req.url))
   }
 
-  return NextResponse.next()
+  if (shouldLogRequest(pathname)) {
+    log.info("Request completed", {
+      statusCode: 200,
+      duration: Date.now() - start,
+      userId: req.auth?.user?.id ?? undefined,
+    })
+  }
+
+  const response = NextResponse.next()
+  return addRequestIdHeader(response, requestId)
 })
 
 export const config = {

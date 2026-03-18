@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiAuth } from "@/lib/api-auth";
+import { requireApiAuth, requireScope } from "@/lib/api-auth";
 import { createAgentRun } from "@/db/queries";
 import { isValidUUID } from "@/lib/validation";
 import { canUseAgent } from "@/lib/feature-gates";
@@ -20,6 +20,10 @@ import { canUseAgent } from "@/lib/feature-gates";
 export async function POST(request: Request) {
   const { ctx, error } = await requireApiAuth(request);
   if (error) return error;
+
+  if (!requireScope(ctx!, "write")) {
+    return NextResponse.json({ error: "Insufficient scope. Required: write" }, { status: 403 });
+  }
 
   if (!canUseAgent(ctx!.tier, "ORACLE")) {
     return NextResponse.json(

@@ -429,5 +429,17 @@
     "template": "Modelo",
     "batchStarted": "Geracao em lote iniciada",
     "formats": "Formatos"
+  },
+  "security": {
+    "apiScopes": "Escopos da API",
+    "scopeRead": "Leitura",
+    "scopeReadDesc": "Acesso somente leitura a jogadores, analises e relatorios",
+    "scopeWrite": "Escrita",
+    "scopeWriteDesc": "Criar analises e executar agentes",
+    "scopeAdmin": "Administrador",
+    "scopeAdminDesc": "Gerenciar chaves, webhooks e equipe",
+    "requestId": "ID da requisicao",
+    "threatDetected": "Ameaca detectada",
+    "inputSanitized": "Entrada sanitizada"
   }
 }

@@ -429,5 +429,17 @@
     "template": "Template",
     "batchStarted": "Batch generation started",
     "formats": "Formats"
+  },
+  "security": {
+    "apiScopes": "API Scopes",
+    "scopeRead": "Read",
+    "scopeReadDesc": "Read-only access to players, analyses, and reports",
+    "scopeWrite": "Write",
+    "scopeWriteDesc": "Create analyses and run agents",
+    "scopeAdmin": "Admin",
+    "scopeAdminDesc": "Manage keys, webhooks, and team",
+    "requestId": "Request ID",
+    "threatDetected": "Threat detected",
+    "inputSanitized": "Input sanitized"
   }
 }

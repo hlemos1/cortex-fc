@@ -24,6 +24,7 @@ export async function GET() {
         name: k.name,
         keyPrefix: k.keyPrefix,
         rateLimitPerMin: k.rateLimitPerMin,
+        scopes: k.scopes,
         isActive: k.isActive,
         lastUsedAt: k.lastUsedAt,
         expiresAt: k.expiresAt,
@@ -56,7 +57,14 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, rateLimitPerMin } = body;
+    const { name, rateLimitPerMin, scopes: requestedScopes } = body;
+
+    // Validate scopes
+    const VALID_SCOPES = ["read", "write", "admin"];
+    const scopes: string[] = Array.isArray(requestedScopes)
+      ? requestedScopes.filter((s: unknown) => typeof s === "string" && VALID_SCOPES.includes(s))
+      : ["read"];
+    if (scopes.length === 0) scopes.push("read");
 
     const { rawKey, keyHash, keyPrefix } = generateApiKey();
 
@@ -67,6 +75,7 @@ export async function POST(request: Request) {
       name: name ?? "Default",
       createdBy: session!.userId,
       rateLimitPerMin: rateLimitPerMin ?? 60,
+      scopes,
     });
 
     // Return the raw key ONLY on creation — it cannot be retrieved again
@@ -77,6 +86,7 @@ export async function POST(request: Request) {
         name: key.name,
         keyPrefix: key.keyPrefix,
         rateLimitPerMin: key.rateLimitPerMin,
+        scopes: key.scopes,
         createdAt: key.createdAt,
       },
       warning: "Save this key now. It cannot be retrieved again.",

@@ -17,11 +17,23 @@ import { checkRateLimit } from "./rate-limit";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
+export type ApiScope = "read" | "write" | "admin";
+
 interface ApiContext {
   orgId: string;
   tier: string;
   keyId: string;
   rateLimitPerMin: number;
+  scopes: string[];
+}
+
+export function requireScope(ctx: { scopes?: string[] }, scope: ApiScope): boolean {
+  const keyScopes = ctx.scopes ?? ["read"];
+  // admin has all permissions
+  if (keyScopes.includes("admin")) return true;
+  // write includes read
+  if (scope === "read" && keyScopes.includes("write")) return true;
+  return keyScopes.includes(scope);
 }
 
 const hasRedis =
@@ -151,6 +163,7 @@ export async function requireApiAuth(
       tier,
       keyId: apiKey.id,
       rateLimitPerMin: apiKey.rateLimitPerMin ?? 60,
+      scopes: (apiKey.scopes as string[] | null) ?? ["read"],
     },
     error: null,
   };

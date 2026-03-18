@@ -105,6 +105,7 @@ export const apiKeys = pgTable(
     keyPrefix: text("key_prefix").notNull(), // first 8 chars for display (e.g. "ctx_abc1...")
     name: text("name").default("Default").notNull(),
     rateLimitPerMin: integer("rate_limit_per_min").default(60),
+    scopes: jsonb("scopes").$type<string[]>().default(["read"]),
     isActive: boolean("is_active").default(true).notNull(),
     lastUsedAt: timestamp("last_used_at"),
     expiresAt: timestamp("expires_at"),

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiAuth } from "@/lib/api-auth";
+import { requireApiAuth, requireScope } from "@/lib/api-auth";
 import { getPlayers, searchPlayers, searchPlayersAdvanced } from "@/db/queries";
 
 /**
@@ -19,6 +19,10 @@ import { getPlayers, searchPlayers, searchPlayersAdvanced } from "@/db/queries";
 export async function GET(request: Request) {
   const { ctx, error } = await requireApiAuth(request);
   if (error) return error;
+
+  if (!requireScope(ctx!, "read")) {
+    return NextResponse.json({ error: "Insufficient scope. Required: read" }, { status: 403 });
+  }
 
   const url = new URL(request.url);
   const search = url.searchParams.get("search") ?? "";
