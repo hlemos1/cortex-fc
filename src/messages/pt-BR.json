@@ -406,5 +406,28 @@
     "expiresIn": "Expira em",
     "days": "dias",
     "never": "Nunca"
+  },
+  "reports": {
+    "export": "Exportar",
+    "exportCsvDesc": "Planilha simples, compativel com Excel",
+    "exportXlsxDesc": "Planilha formatada para Excel",
+    "exportJsonDesc": "Dados estruturados para integracao",
+    "selected": "selecionados",
+    "batchGeneratePdf": "Gerar PDFs",
+    "clearSelection": "Limpar selecao",
+    "schedules": "Agendamentos",
+    "newSchedule": "Novo Agendamento",
+    "frequency": "Frequencia",
+    "daily": "Diario",
+    "weekly": "Semanal",
+    "monthly": "Mensal",
+    "nextRun": "Proxima execucao",
+    "lastRun": "Ultima execucao",
+    "noSchedules": "Nenhum agendamento configurado",
+    "scheduleCreated": "Agendamento criado",
+    "scheduleDeleted": "Agendamento removido",
+    "template": "Modelo",
+    "batchStarted": "Geracao em lote iniciada",
+    "formats": "Formatos"
   }
 }

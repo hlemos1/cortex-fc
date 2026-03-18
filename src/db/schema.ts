@@ -483,6 +483,40 @@ export const reports = pgTable(
 );
 
 // ============================================
+// REPORT SCHEDULES (Sprint 8.2)
+// ============================================
+
+export const reportSchedules = pgTable(
+  "report_schedules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .references(() => organizations.id)
+      .notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    template: text("template").notNull(), // "weekly_newsletter" | "squad_analysis" etc
+    title: text("title"),
+    frequency: text("frequency").notNull(), // "daily" | "weekly" | "monthly"
+    dayOfWeek: integer("day_of_week"), // 0-6, for weekly
+    dayOfMonth: integer("day_of_month"), // 1-28, for monthly
+    hour: integer("hour").notNull().default(9), // 0-23 UTC
+    timezone: text("timezone").default("America/Sao_Paulo"),
+    recipientEmails: jsonb("recipient_emails").$type<string[]>().default([]),
+    isActive: boolean("is_active").default(true),
+    lastRunAt: timestamp("last_run_at"),
+    nextRunAt: timestamp("next_run_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_report_schedules_org").on(table.orgId),
+    index("idx_report_schedules_next_run").on(table.nextRunAt),
+  ]
+);
+
+// ============================================
 // AGENT RUNS (Audit log)
 // ============================================
 

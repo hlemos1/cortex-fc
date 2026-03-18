@@ -406,5 +406,28 @@
     "expiresIn": "Expires in",
     "days": "days",
     "never": "Never"
+  },
+  "reports": {
+    "export": "Export",
+    "exportCsvDesc": "Simple spreadsheet, Excel compatible",
+    "exportXlsxDesc": "Formatted spreadsheet for Excel",
+    "exportJsonDesc": "Structured data for integrations",
+    "selected": "selected",
+    "batchGeneratePdf": "Generate PDFs",
+    "clearSelection": "Clear selection",
+    "schedules": "Schedules",
+    "newSchedule": "New Schedule",
+    "frequency": "Frequency",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "nextRun": "Next run",
+    "lastRun": "Last run",
+    "noSchedules": "No schedules configured",
+    "scheduleCreated": "Schedule created",
+    "scheduleDeleted": "Schedule removed",
+    "template": "Template",
+    "batchStarted": "Batch generation started",
+    "formats": "Formats"
   }
 }
