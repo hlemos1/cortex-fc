@@ -16,7 +16,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: |
-            
+            https://cortex-fc.vercel.app
           budgetPath: .github/lighthouse/budget.json
           uploadArtifacts: true
 
