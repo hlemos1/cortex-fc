@@ -1,75 +1,49 @@
-# Contributing
+# Guia de Contribuicao
 
-## Branch Naming
+Obrigado por contribuir com este projeto. Siga as diretrizes abaixo para manter a qualidade e consistencia do codigo.
 
-- `feat/` — nova funcionalidade
-- `fix/` — correção de bug
-- `chore/` — manutenção, dependências, CI
-- `docs/` — documentação
-- `refactor/` — refatoração sem mudança de comportamento
-- `test/` — adição ou correção de testes
+## Nomenclatura de Branches
 
-Exemplo: `feat/add-health-endpoint`
+Utilize os seguintes prefixos ao criar branches:
 
-## Commit Convention
+- `feature/` — Nova funcionalidade (ex: `feature/filtro-de-busca`)
+- `fix/` — Correcao de bug (ex: `fix/erro-login`)
+- `docs/` — Alteracoes em documentacao (ex: `docs/atualizar-readme`)
+- `refactor/` — Refatoracao sem mudanca de comportamento (ex: `refactor/extrair-servico`)
 
-Usamos [Conventional Commits](https://www.conventionalcommits.org/):
+## Convencao de Commits
 
-```
-tipo(escopo): descrição curta
+Seguimos o padrao [Conventional Commits](https://www.conventionalcommits.org/):
 
-corpo opcional
+- `feat:` — Nova funcionalidade
+- `fix:` — Correcao de bug
+- `docs:` — Alteracao em documentacao
+- `chore:` — Tarefas de manutencao (deps, configs, CI)
+- `refactor:` — Refatoracao de codigo
+- `test:` — Adicao ou correcao de testes
 
-Co-Authored-By: Nome <email>
-```
+Exemplo: `feat: adicionar endpoint de listagem de pedidos`
 
-Tipos: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`, `style`, `perf`
+## Processo de Pull Request
 
-## Pull Request
+1. Crie uma branch a partir de `main` seguindo a nomenclatura acima.
+2. Implemente as alteracoes com commits atomicos e descritivos.
+3. Rode os testes localmente antes de abrir o PR.
+4. Abra o PR com titulo claro e descricao do que foi feito e por que.
+5. Solicite revisao de pelo menos um membro da equipe.
+6. Aguarde aprovacao antes de fazer merge.
 
-1. Crie uma branch a partir de `main`
-2. Faça commits seguindo a convenção acima
-3. Abra um PR com descrição clara do que foi feito
-4. Aguarde a CI passar (lint + typecheck + build + tests)
-5. Solicite review
+## Checklist de Code Review
 
-### PR Template
+Antes de aprovar um PR, verifique:
 
-```markdown
-## O que mudou
-- Descrição das alterações
+- [ ] Testes passando (suite completa, zero falhas)
+- [ ] Sem erros de lint
+- [ ] Sem secrets ou credenciais no codigo
+- [ ] Tipagem correta (sem `any` desnecessario em TypeScript)
+- [ ] Sem codigo morto ou comentado
+- [ ] Mudancas coerentes com o escopo do PR
 
-## Como testar
-- Passos para validar as mudanças
+## Setup de Desenvolvimento
 
-## Checklist
-- [ ] Testes adicionados/atualizados
-- [ ] CI passando
-- [ ] Sem breaking changes (ou documentado)
-```
-
-## Code Review Checklist
-
-- [ ] Código segue os padrões do projeto
-- [ ] Testes cobrem os casos relevantes
-- [ ] Sem secrets ou credenciais expostas
-- [ ] Performance considerada
-- [ ] Sem dependências desnecessárias
-
-## Setup Local
-
-```bash
-git clone <repo-url>
-cd <repo>
-npm install  # ou pnpm install
-cp .env.example .env.local
-npm run dev
-```
-
-## Testes
-
-```bash
-npm test          # rodar todos os testes
-npm run test:watch # modo watch
-```
-
+Consulte o `README.md` do projeto para instrucoes de instalacao e configuracao do ambiente de desenvolvimento.
