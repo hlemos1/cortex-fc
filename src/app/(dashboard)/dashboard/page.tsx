@@ -18,11 +18,15 @@ import { DashboardTour } from "@/components/cortex/DashboardTour"
 import { WelcomeModal } from "@/components/cortex/WelcomeModal"
 import { getTranslations } from "next-intl/server"
 import { ScrollFade } from "@/components/ui/scroll-fade"
+import { auth } from "@/auth"
 
 export default async function DashboardPage() {
   const t = await getTranslations("dashboard")
   const tc = await getTranslations("common")
   const tn = await getTranslations("nav")
+
+  const session = await auth()
+  const orgName = session?.user?.orgName ?? "Cortex FC"
 
   const [stats, analyses, allPlayers] = await Promise.all([
     getDashboardStats(),
@@ -169,7 +173,7 @@ export default async function DashboardPage() {
             {t("title")}
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            {t("subtitle", { clubName: "Nottingham Forest FC" })}
+            {t("subtitle", { clubName: orgName })}
           </p>
         </div>
         <Link href="/analysis/new" data-tour="new-analysis">

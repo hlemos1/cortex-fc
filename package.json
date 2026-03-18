@@ -13,7 +13,12 @@
     "test:coverage": "vitest run --coverage",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx}\"",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "ANALYZE=true next build",
+    "db:reset": "npx tsx src/db/reset.ts",
+    "db:seed": "npx tsx src/db/seed.ts",
+    "db:seed-demo": "npx tsx src/db/seed-demo.ts",
+    "db:migrate": "npx drizzle-kit push",
+    "db:studio": "npx drizzle-kit studio"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
