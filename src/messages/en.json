@@ -278,7 +278,16 @@
     "analyses": "Analyses",
     "avgVx": "Avg Vx",
     "avgRx": "Avg Rx",
-    "avgScn": "Avg SCN+"
+    "avgScn": "Avg SCN+",
+    "analysesPerDay": "Analyses per Day",
+    "agentCost": "AI Cost per Week",
+    "scnTrend": "SCN+ Trend",
+    "contractTimeline": "Expiring Contracts",
+    "scoutingFunnel": "Scouting Pipeline",
+    "totalAnalyses": "Total Analyses",
+    "aiCostMonth": "AI Cost (Month)",
+    "scoutingTargets": "Scouting Targets",
+    "last30days": "Last 30 days"
   },
   "agentConsole": {
     "title": "Agent Studio",
@@ -386,7 +395,15 @@
     "free": "Free",
     "trialActive": "Trial active",
     "daysLeft": "days left",
-    "compare": "Compare Plans"
+    "compare": "Compare Plans",
+    "aiCosts": "AI Costs",
+    "aiCostTotal": "Total Cost (Month)",
+    "aiCostRuns": "Agent Runs",
+    "aiCostThisMonth": "this month",
+    "aiCostAvgRun": "Avg Cost/Run",
+    "aiCostByAgent": "Cost by Agent Type",
+    "aiCostDailySparkline": "Daily Cost (Last 7 Days)",
+    "aiCostNoData": "No AI cost data available"
   },
   "auth": {
     "login": "Sign in",

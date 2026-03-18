@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { neuralAnalyses, agentRuns, scoutingTargets } from "@/db/schema";
-import { eq, and, gte, sql, count, sum, isNull } from "drizzle-orm";
+import { eq, and, gte, sql, count, sum, avg, isNull, desc } from "drizzle-orm";
 
 /**
  * Analyses created per day for the last N days.
@@ -145,6 +145,61 @@ export async function getScoutingVelocity(orgId: string, days: number = 90) {
       ),
     )
     .groupBy(scoutingTargets.status);
+
+  return result;
+}
+
+/**
+ * Analyses created per day for the last N days, filtered by org (via analyst).
+ */
+export async function getAnalysesPerDayByOrg(orgId: string, days: number = 30) {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const result = await db
+    .select({
+      date: sql<string>`DATE(${neuralAnalyses.createdAt})`.as("date"),
+      count: count(),
+    })
+    .from(neuralAnalyses)
+    .where(
+      and(
+        sql`${neuralAnalyses.analystId} IN (SELECT id FROM users WHERE org_id = ${orgId})`,
+        gte(neuralAnalyses.createdAt, since),
+        isNull(neuralAnalyses.deletedAt),
+      ),
+    )
+    .groupBy(sql`DATE(${neuralAnalyses.createdAt})`)
+    .orderBy(sql`DATE(${neuralAnalyses.createdAt})`);
+
+  return result;
+}
+
+/**
+ * Org-level SCN+ trend — average SCN+ per week over the last N months.
+ */
+export async function getOrgScnTrend(orgId: string, months: number = 6) {
+  const since = new Date();
+  since.setMonth(since.getMonth() - months);
+
+  const result = await db
+    .select({
+      week: sql<string>`TO_CHAR(DATE_TRUNC('week', ${neuralAnalyses.createdAt}), 'YYYY-MM-DD')`.as("week"),
+      avgScnPlus: sql<number>`ROUND(AVG(${neuralAnalyses.scnPlus})::numeric, 1)`.as("avg_scn_plus"),
+      avgVx: sql<number>`ROUND(AVG(${neuralAnalyses.vx})::numeric, 2)`.as("avg_vx"),
+      avgRx: sql<number>`ROUND(AVG(${neuralAnalyses.rx})::numeric, 2)`.as("avg_rx"),
+      count: count(),
+    })
+    .from(neuralAnalyses)
+    .where(
+      and(
+        sql`${neuralAnalyses.analystId} IN (SELECT id FROM users WHERE org_id = ${orgId})`,
+        gte(neuralAnalyses.createdAt, since),
+        isNull(neuralAnalyses.deletedAt),
+      ),
+    )
+    .groupBy(sql`DATE_TRUNC('week', ${neuralAnalyses.createdAt})`)
+    .orderBy(sql`DATE_TRUNC('week', ${neuralAnalyses.createdAt})`);
 
   return result;
 }

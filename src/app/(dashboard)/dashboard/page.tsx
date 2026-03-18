@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { VxRxScatter } from "@/components/cortex/VxRxScatter"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
-import { getDashboardStats, getAnalyses, getPlayers } from "@/db/queries"
+import { getDashboardStats, getAnalyses, getPlayers, getAuditLogs } from "@/db/queries"
 import { toScatterPoint, toAlgorithmScores, formatDate } from "@/lib/db-transforms"
 import { AlertsPanel } from "../AlertsPanel"
 import type { Alert } from "../AlertsPanel"
@@ -31,10 +31,11 @@ export default async function DashboardPage() {
 
   const orgName = session.name ?? "Cortex FC"
 
-  const [stats, analyses, allPlayers] = await Promise.all([
+  const [stats, analyses, allPlayers, auditLogRows] = await Promise.all([
     getDashboardStats(session.orgId),
     getAnalyses(session.orgId),
     getPlayers(),
+    getAuditLogs(session.orgId, { limit: 15 }),
   ])
 
   // Generate alerts from real DB data
@@ -127,38 +128,42 @@ export default async function DashboardPage() {
     },
   ]
 
-  // Generate activity feed from existing data
-  const feedActivities = analyses.slice(0, 15).map((analysis, index) => {
-    const playerName = analysis.player?.name ?? "Desconhecido"
-    const analystName = analysis.analyst?.name ?? "Sistema"
-    const types = ["analysis", "scouting", "report", "agent"] as const
-    const type = index < 5 ? "analysis" : types[index % types.length]
+  // Activity feed from real audit logs
+  const actionTypeMap: Record<string, "analysis" | "scouting" | "report" | "agent" | "import" | "settings"> = {
+    "analysis.create": "analysis",
+    "analysis.update": "analysis",
+    "analysis.delete": "analysis",
+    "scouting.create": "scouting",
+    "scouting.update": "scouting",
+    "scouting.delete": "scouting",
+    "report.generate": "report",
+    "report.export": "report",
+    "agent.run": "agent",
+    "agent.complete": "agent",
+    "player.import": "import",
+    "player.create": "import",
+    "settings.update": "settings",
+    "org.update": "settings",
+  }
 
-    const titleMap: Record<string, string> = {
-      analysis: `Analise concluida: ${playerName}`,
-      scouting: `Scouting atualizado: ${playerName}`,
-      report: `Relatorio gerado: ${playerName}`,
-      agent: `Agente processou: ${playerName}`,
-    }
-
-    const descMap: Record<string, string> = {
-      analysis: `Decisao ${analysis.decision} — SCN+ ${analysis.scnPlus ?? "—"}, Vx ${analysis.vx.toFixed(2)}, Rx ${analysis.rx.toFixed(2)}`,
-      scouting: `Nova avaliacao registrada para ${playerName} no pipeline de scouting.`,
-      report: `PDF de analise neural gerado com parecer ${analysis.decision}.`,
-      agent: `Agente autonomo finalizou processamento de dados para ${playerName}.`,
-    }
+  const feedActivities = auditLogRows.map((log) => {
+    const actionKey = Object.keys(actionTypeMap).find((k) => log.action.startsWith(k))
+    const type = actionKey ? actionTypeMap[actionKey] : "analysis"
+    const meta = log.metadata as Record<string, unknown> | null
 
     return {
-      id: `activity-${analysis.id}-${index}`,
+      id: log.id,
       type,
-      title: titleMap[type],
-      description: descMap[type],
-      userName: analystName,
-      entityType: "analysis",
-      entityId: analysis.id as string,
-      createdAt: analysis.createdAt instanceof Date
-        ? analysis.createdAt.toISOString()
-        : String(analysis.createdAt),
+      title: log.action.replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      description: meta?.description
+        ? String(meta.description)
+        : `${log.entityType ?? "sistema"} ${log.entityId ? `#${log.entityId.slice(0, 8)}` : ""}`.trim(),
+      userName: log.userName ?? "Sistema",
+      entityType: log.entityType ?? undefined,
+      entityId: log.entityId ?? undefined,
+      createdAt: log.createdAt instanceof Date
+        ? log.createdAt.toISOString()
+        : String(log.createdAt),
     }
   })
 
@@ -215,14 +220,26 @@ export default async function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <VxRxScatter data={scatterData} height={380} />
-            <div className="flex flex-wrap gap-3 mt-4 justify-center">
-              {(["CONTRATAR", "BLINDAR", "MONITORAR", "RECUSAR", "ALERTA_CINZA"] as const).map(
-                (d) => (
-                  <DecisionBadge key={d} decision={d} size="sm" />
-                )
-              )}
-            </div>
+            {scatterData.length === 0 ? (
+              <div className="h-[380px] flex flex-col items-center justify-center text-zinc-500">
+                <Cpu className="w-10 h-10 mb-3 text-zinc-600" />
+                <p className="text-sm">Nenhuma analise disponivel para o mapa Vx/Rx.</p>
+                <Link href="/analysis/new" className="mt-2 text-xs text-emerald-500 hover:underline">
+                  Criar primeira analise
+                </Link>
+              </div>
+            ) : (
+              <>
+                <VxRxScatter data={scatterData} height={380} />
+                <div className="flex flex-wrap gap-3 mt-4 justify-center">
+                  {(["CONTRATAR", "BLINDAR", "MONITORAR", "RECUSAR", "ALERTA_CINZA"] as const).map(
+                    (d) => (
+                      <DecisionBadge key={d} decision={d} size="sm" />
+                    )
+                  )}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -260,6 +277,16 @@ export default async function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {recentAnalyses.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+              <Activity className="w-10 h-10 mb-3 text-zinc-600" />
+              <p className="text-sm">Nenhuma analise recente encontrada.</p>
+              <Link href="/analysis/new" className="mt-2 text-xs text-emerald-500 hover:underline">
+                Criar primeira analise
+              </Link>
+            </div>
+          ) : (
+          <>
           {/* Desktop: Table */}
           <ScrollFade className="hidden md:block">
             <table className="w-full text-sm">
@@ -396,6 +423,8 @@ export default async function DashboardPage() {
               )
             })}
           </div>
+          </>
+          )}
         </CardContent>
       </Card>
 

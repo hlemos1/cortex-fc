@@ -17,6 +17,29 @@ interface UsageData {
   tokensUsed: number;
 }
 
+interface AiCostAgent {
+  agentType: string;
+  label: string;
+  totalTokens: number;
+  runCount: number;
+  costUsd: number;
+}
+
+interface AiCostDaily {
+  date: string;
+  tokens: number;
+  runs: number;
+  costUsd: number;
+}
+
+interface AiCostData {
+  totalTokens: number;
+  totalRuns: number;
+  totalCostUsd: number;
+  byAgent: AiCostAgent[];
+  dailyCosts: AiCostDaily[];
+}
+
 const PLANS = [
   {
     tier: "scout_individual" as const,
@@ -172,9 +195,11 @@ export default function BillingPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [orgInfo, setOrgInfo] = useState<OrgInfo | null>(null);
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const [aiCosts, setAiCosts] = useState<AiCostData | null>(null);
   const [orgLoading, setOrgLoading] = useState(true);
   const [usageLoading, setUsageLoading] = useState(true);
   const [usageError, setUsageError] = useState(false);
+  const [aiCostsLoading, setAiCostsLoading] = useState(true);
 
   const currentTier = orgInfo?.tier ?? "free";
 
@@ -211,10 +236,26 @@ export default function BillingPage() {
     }
   }, []);
 
+  const fetchAiCosts = useCallback(async () => {
+    setAiCostsLoading(true);
+    try {
+      const res = await fetch("/api/billing/ai-costs");
+      if (res.ok) {
+        const data = await res.json();
+        setAiCosts(data);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setAiCostsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchOrgInfo();
     fetchUsage();
-  }, [fetchOrgInfo, fetchUsage]);
+    fetchAiCosts();
+  }, [fetchOrgInfo, fetchUsage, fetchAiCosts]);
 
   const handleCheckout = async (tier: string) => {
     setLoading(tier);
@@ -427,6 +468,108 @@ export default function BillingPage() {
               t={t}
             />
           </div>
+        )}
+      </div>
+
+      {/* AI Costs section */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">{t("aiCosts")}</h3>
+        {aiCostsLoading ? (
+          <UsageSkeleton />
+        ) : aiCosts ? (
+          <div className="space-y-6">
+            {/* Total cost */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-zinc-800/50 rounded-lg p-4">
+                <p className="text-sm text-zinc-400 mb-1">{t("aiCostTotal")}</p>
+                <p className="text-2xl font-bold font-mono text-white">
+                  ${aiCosts.totalCostUsd.toFixed(2)}
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  {aiCosts.totalTokens.toLocaleString()} tokens
+                </p>
+              </div>
+              <div className="bg-zinc-800/50 rounded-lg p-4">
+                <p className="text-sm text-zinc-400 mb-1">{t("aiCostRuns")}</p>
+                <p className="text-2xl font-bold font-mono text-white">
+                  {aiCosts.totalRuns}
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">{t("aiCostThisMonth")}</p>
+              </div>
+              <div className="bg-zinc-800/50 rounded-lg p-4">
+                <p className="text-sm text-zinc-400 mb-1">{t("aiCostAvgRun")}</p>
+                <p className="text-2xl font-bold font-mono text-white">
+                  ${aiCosts.totalRuns > 0
+                    ? (aiCosts.totalCostUsd / aiCosts.totalRuns).toFixed(4)
+                    : "0.00"}
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">USD/execucao</p>
+              </div>
+            </div>
+
+            {/* Cost breakdown by agent */}
+            {aiCosts.byAgent.length > 0 && (
+              <div>
+                <p className="text-sm text-zinc-400 mb-3">{t("aiCostByAgent")}</p>
+                <div className="space-y-2">
+                  {aiCosts.byAgent
+                    .sort((a, b) => b.costUsd - a.costUsd)
+                    .map((agent) => {
+                      const maxCost = Math.max(...aiCosts.byAgent.map((a) => a.costUsd), 0.001);
+                      const pct = (agent.costUsd / maxCost) * 100;
+                      return (
+                        <div key={agent.agentType} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-zinc-300">{agent.label}</span>
+                            <span className="text-zinc-400 font-mono text-xs">
+                              ${agent.costUsd.toFixed(4)} ({agent.runCount} runs)
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                              style={{ width: `${Math.max(pct, 2)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* Daily sparkline (last 7 days) */}
+            {aiCosts.dailyCosts.length > 0 && (
+              <div>
+                <p className="text-sm text-zinc-400 mb-3">{t("aiCostDailySparkline")}</p>
+                <div className="flex items-end gap-1 h-16">
+                  {aiCosts.dailyCosts.map((day) => {
+                    const maxDayCost = Math.max(
+                      ...aiCosts.dailyCosts.map((d) => d.costUsd),
+                      0.001
+                    );
+                    const heightPct = Math.max((day.costUsd / maxDayCost) * 100, 4);
+                    const dateLabel = new Date(day.date + "T12:00:00").toLocaleDateString(
+                      "pt-BR",
+                      { weekday: "short" }
+                    );
+                    return (
+                      <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                        <div
+                          className="w-full bg-emerald-500/60 rounded-t transition-all duration-300 hover:bg-emerald-500 cursor-default"
+                          style={{ height: `${heightPct}%` }}
+                          title={`${dateLabel}: $${day.costUsd.toFixed(4)}`}
+                        />
+                        <span className="text-[9px] text-zinc-600">{dateLabel}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-zinc-500 text-center py-4">{t("aiCostNoData")}</p>
         )}
       </div>
 

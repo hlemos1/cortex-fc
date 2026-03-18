@@ -7,6 +7,7 @@ import {
   sql,
   and,
   sum,
+  gte,
 } from "drizzle-orm";
 import { agentRuns } from "@/db/schema";
 
@@ -134,4 +135,56 @@ export async function getAgentUsageTimeline(orgId?: string, days = 30) {
     count: r.count,
     tokens: Number(r.tokens ?? 0),
   }));
+}
+
+/**
+ * Get cost breakdown by agent type for the current month
+ */
+export async function getAgentCostBreakdown(orgId: string) {
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const runs = await db
+    .select({
+      agentType: agentRuns.agentType,
+      totalTokens: sql<number>`COALESCE(SUM(${agentRuns.tokensUsed}), 0)`,
+      runCount: sql<number>`COUNT(*)`,
+    })
+    .from(agentRuns)
+    .where(
+      and(
+        eq(agentRuns.orgId, orgId),
+        gte(agentRuns.createdAt, startOfMonth)
+      )
+    )
+    .groupBy(agentRuns.agentType);
+
+  return runs;
+}
+
+/**
+ * Get daily cost data for the last N days
+ */
+export async function getAgentCostDaily(orgId: string, days: number = 7) {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const daily = await db
+    .select({
+      date: sql<string>`to_char(${agentRuns.createdAt}, 'YYYY-MM-DD')`,
+      totalTokens: sql<number>`COALESCE(SUM(${agentRuns.tokensUsed}), 0)`,
+      runCount: sql<number>`COUNT(*)`,
+    })
+    .from(agentRuns)
+    .where(
+      and(
+        eq(agentRuns.orgId, orgId),
+        gte(agentRuns.createdAt, since)
+      )
+    )
+    .groupBy(sql`to_char(${agentRuns.createdAt}, 'YYYY-MM-DD')`)
+    .orderBy(sql`to_char(${agentRuns.createdAt}, 'YYYY-MM-DD')`);
+
+  return daily;
 }
