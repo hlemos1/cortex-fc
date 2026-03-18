@@ -26,6 +26,7 @@ import {
   Menu,
   X,
   LogOut,
+  BookOpen,
 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
@@ -58,6 +59,7 @@ const navItemDefs = [
   { href: "/holding", key: "holding" as const, icon: Building2, prefetch: false },
   { href: "/audit-log", key: "auditLog" as const, icon: Shield, prefetch: false },
   { href: "/billing", key: "billing" as const, icon: CreditCard, prefetch: false },
+  { href: "/api-docs", key: "docsApi" as const, icon: BookOpen, prefetch: false },
   { href: "/settings", key: "settings" as const, icon: Settings, prefetch: false },
 ]
 

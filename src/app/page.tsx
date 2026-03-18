@@ -637,8 +637,24 @@ export default function LandingPage() {
             </p>
           </AnimatedSection>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {[
+              {
+                name: "Free",
+                price: "0",
+                period: "",
+                badge: null,
+                features: [
+                  "5 análises por mês",
+                  "1 agente (ORACLE)",
+                  "3 algoritmos (SCN+, AST, CLF)",
+                  "5 alvos de scouting",
+                  "1 relatório por mês",
+                ],
+                cta: "Começar Grátis",
+                href: "/register",
+                featured: false,
+              },
               {
                 name: "Scout Individual",
                 price: "49",
@@ -646,12 +662,14 @@ export default function LandingPage() {
                 badge: null,
                 features: [
                   "50 análises por mês",
+                  "2 agentes (ORACLE + SCOUT)",
                   "3 algoritmos proprietários",
-                  "Relatórios básicos",
-                  "Matriz VxRx simplificada",
-                  "Suporte por email",
+                  "25 alvos de scouting",
+                  "10 relatórios por mês",
+                  "Export CSV",
                 ],
-                cta: "Começar Grátis",
+                cta: "Iniciar Trial",
+                href: "/register",
                 featured: false,
               },
               {
@@ -663,29 +681,31 @@ export default function LandingPage() {
                   "Análises ilimitadas",
                   "7 algoritmos proprietários",
                   "6 agentes de IA completos",
-                  "Export PDF executivo",
+                  "Scouting ilimitado",
+                  "Export PDF + CSV",
                   "API access",
-                  "Dashboard avançado",
                   "Suporte prioritário",
                 ],
-                cta: "Começar Agora",
+                cta: "Iniciar Trial",
+                href: "/register",
                 featured: true,
               },
               {
                 name: "Holding Multi-Club",
-                price: "899",
-                period: "/mês",
+                price: null,
+                period: "",
                 badge: null,
                 features: [
                   "Tudo do Professional",
                   "Gestão multi-clube",
                   "Benchmarking cruzado",
                   "White-label disponível",
+                  "SSO / SAML",
+                  "Export XLSX + PDF + CSV",
                   "SLA dedicado",
-                  "Onboarding personalizado",
-                  "Gestor de conta exclusivo",
                 ],
                 cta: "Falar com Vendas",
+                href: "/register",
                 featured: false,
               },
             ].map((plan) => (
@@ -707,13 +727,19 @@ export default function LandingPage() {
                     <h3 className="text-base font-semibold mb-4">
                       {plan.name}
                     </h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xs text-zinc-500">€</span>
-                      <span className="text-4xl font-bold">{plan.price}</span>
-                      <span className="text-sm text-zinc-500">
-                        {plan.period}
-                      </span>
-                    </div>
+                    {plan.price !== null ? (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xs text-zinc-500">€</span>
+                        <span className="text-4xl font-bold">{plan.price}</span>
+                        {plan.period && (
+                          <span className="text-sm text-zinc-500">
+                            {plan.period}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-2xl font-bold text-zinc-300">Sob consulta</p>
+                    )}
                   </div>
 
                   <ul className="space-y-3 mb-8 flex-grow">
@@ -729,8 +755,8 @@ export default function LandingPage() {
                   </ul>
 
                   <Link
-                    href="/register"
-                    className={`w-full text-center py-3 rounded-lg text-sm font-medium transition-all ${
+                    href={plan.href}
+                    className={`w-full text-center py-3 rounded-lg text-sm font-medium transition-all block ${
                       plan.featured
                         ? "bg-emerald-500 hover:bg-emerald-400 text-black hover:shadow-lg hover:shadow-emerald-500/20"
                         : "border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white"

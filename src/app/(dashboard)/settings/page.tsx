@@ -18,7 +18,10 @@ import {
   Save,
   Sparkles,
   Loader2,
+  ShieldCheck,
+  AlertTriangle,
 } from "lucide-react"
+import { signOut } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -576,8 +579,148 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Privacidade e Dados (LGPD) */}
+        <LgpdSection />
       </div>
       )}
     </div>
+  )
+}
+
+// ============================================
+// LGPD — Privacidade e Dados
+// ============================================
+
+function LgpdSection() {
+  const [exporting, setExporting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const { toast } = useToast()
+
+  async function handleExportData() {
+    setExporting(true)
+    try {
+      const res = await fetch("/api/account")
+      if (!res.ok) throw new Error("Falha ao exportar dados")
+      const data = await res.json()
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `cortex-fc-meus-dados-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast({ type: "success", title: "Dados exportados com sucesso" })
+    } catch {
+      toast({ type: "error", title: "Erro ao exportar dados", description: "Tente novamente" })
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true)
+    try {
+      const res = await fetch("/api/account", { method: "DELETE" })
+      if (!res.ok) throw new Error("Falha ao excluir conta")
+      toast({ type: "success", title: "Conta excluida" })
+      signOut({ callbackUrl: "/login" })
+    } catch {
+      toast({ type: "error", title: "Erro ao excluir conta", description: "Tente novamente" })
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
+  }
+
+  return (
+    <Card className="glass rounded-xl card-hover animate-slide-up overflow-hidden relative lg:col-span-2">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/20 to-transparent" />
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+            <ShieldCheck className="w-3.5 h-3.5 text-red-400" />
+          </div>
+          Privacidade e Dados (LGPD)
+        </CardTitle>
+        <p className="text-xs text-zinc-500">
+          Controle seus dados pessoais conforme a Lei Geral de Protecao de Dados
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            variant="outline"
+            onClick={handleExportData}
+            disabled={exporting}
+            className="flex-1 justify-start gap-3 bg-zinc-800/30 border-zinc-700/40 text-zinc-300 hover:bg-zinc-800/60 hover:text-zinc-100 hover:border-emerald-500/20 h-12 rounded-xl transition-all"
+          >
+            {exporting ? (
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <Download className="w-4 h-4 text-emerald-400" />
+              </div>
+            )}
+            <div className="text-left">
+              <p className="text-sm">Exportar Meus Dados</p>
+              <p className="text-xs text-zinc-500">Baixar todos os seus dados em JSON</p>
+            </div>
+          </Button>
+
+          {!confirmDelete ? (
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDelete(true)}
+              className="flex-1 justify-start gap-3 bg-zinc-800/30 border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/40 h-12 rounded-xl transition-all"
+            >
+              <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <Trash2 className="w-4 h-4 text-red-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm">Excluir Minha Conta</p>
+                <p className="text-xs text-zinc-500">Remover permanentemente todos os dados</p>
+              </div>
+            </Button>
+          ) : (
+            <div className="flex-1 rounded-xl border border-red-500/30 bg-red-500/5 p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-400">Tem certeza?</p>
+                  <p className="text-xs text-zinc-500">
+                    Esta acao e irreversivel. Todos os seus dados, analises e relatorios serao permanentemente excluidos.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="text-xs border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="text-xs bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {deleting ? (
+                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                  ) : null}
+                  Confirmar Exclusao
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
