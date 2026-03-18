@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { usePresence } from "@/hooks/usePresence"
 import { cn } from "@/lib/utils"
 
@@ -8,7 +9,7 @@ interface PresenceAvatarsProps {
   className?: string
 }
 
-export function PresenceAvatars({ page, className }: PresenceAvatarsProps) {
+export const PresenceAvatars = memo(function PresenceAvatars({ page, className }: PresenceAvatarsProps) {
   const { viewers } = usePresence(page)
 
   if (viewers.length === 0) return null
@@ -32,4 +33,4 @@ export function PresenceAvatars({ page, className }: PresenceAvatarsProps) {
       <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
     </div>
   )
-}
+})

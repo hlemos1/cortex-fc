@@ -27,6 +27,9 @@ import { NeuralRadar } from "@/components/cortex/NeuralRadar"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { AlgorithmBars } from "@/components/cortex/AlgorithmBars"
 import { useAutoSave } from "@/hooks/useAutoSave"
+import { AnalysisSliderField } from "@/components/analysis/AnalysisSliderField"
+import { AnalysisAIOverlay } from "@/components/analysis/AnalysisAIOverlay"
+import { AnalysisStepIndicator } from "@/components/analysis/AnalysisStepIndicator"
 import type { CortexDecision, NeuralLayers, AlgorithmScores, OracleOutput } from "@/types/cortex"
 
 interface APIPlayer {
@@ -48,87 +51,6 @@ const steps = [
   { id: 4, label: "Rx" },
   { id: 5, label: "Neural" },
 ]
-
-interface SliderFieldProps {
-  label: string
-  tooltip: string
-  value: number
-  max?: number
-  onChange: (v: number) => void
-  color?: string
-  aiFilled?: boolean
-}
-
-function SliderField({ label, tooltip, value, max = 10, onChange, color = "emerald", aiFilled }: SliderFieldProps) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Label className="text-xs text-zinc-400">{label}</Label>
-          {aiFilled && <AIBadge />}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="w-3 h-3 text-zinc-500 cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent className="bg-zinc-800 text-zinc-200 border-zinc-700 max-w-xs text-xs">
-              {tooltip}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        <span className={`text-xs font-mono font-semibold text-${color}-400`}>{value}</span>
-      </div>
-      <input
-        type="range"
-        min={0}
-        max={max}
-        step={max === 100 ? 1 : 0.5}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
-          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500
-          [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-zinc-900
-          [&::-webkit-slider-thumb]:cursor-pointer"
-      />
-    </div>
-  )
-}
-
-const AI_PROGRESS_MESSAGES = [
-  "Inicializando ORACLE...",
-  "Processando camada C1 — Tecnico...",
-  "Processando camada C2 — Tatico...",
-  "Processando camada C3 — Fisico...",
-  "Calculando matriz VxRx...",
-  "Gerando algoritmos proprietarios...",
-  "Formulando parecer neural...",
-]
-
-function AILoadingOverlay({ messageIndex }: { messageIndex: number }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="flex flex-col items-center gap-6 max-w-md text-center px-6">
-        <div className="relative">
-          <Brain className="w-16 h-16 text-emerald-400 animate-pulse" />
-          <div className="absolute inset-0 w-16 h-16 rounded-full border-2 border-emerald-500/30 animate-ping" />
-        </div>
-        <div className="space-y-2">
-          <p className="text-lg font-semibold text-zinc-100">Gerando Analise Neural com IA</p>
-          <p className="text-sm text-emerald-400 font-mono animate-pulse">
-            {AI_PROGRESS_MESSAGES[messageIndex % AI_PROGRESS_MESSAGES.length]}
-          </p>
-        </div>
-        <div className="w-64 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full transition-all duration-1000"
-            style={{ width: `${Math.min(95, ((messageIndex + 1) / AI_PROGRESS_MESSAGES.length) * 100)}%` }}
-          />
-        </div>
-        <p className="text-xs text-zinc-500">Isso pode levar 10-30 segundos</p>
-      </div>
-    </div>
-  )
-}
 
 function AIBadge() {
   return (
@@ -508,7 +430,7 @@ export default function NewAnalysisPage() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* AI Loading Overlay */}
-      {isGeneratingAI && <AILoadingOverlay messageIndex={aiProgressIndex} />}
+      {isGeneratingAI && <AnalysisAIOverlay messageIndex={aiProgressIndex} />}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -536,32 +458,7 @@ export default function NewAnalysisPage() {
       </div>
 
       {/* Step indicator */}
-      <div className="flex items-center gap-2">
-        {steps.map((s, i) => (
-          <div key={s.id} className="flex items-center gap-2">
-            <button
-              onClick={() => step > s.id && setStep(s.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                step === s.id
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                  : step > s.id
-                  ? "bg-zinc-800 text-emerald-400 cursor-pointer"
-                  : "bg-zinc-900 text-zinc-500"
-              }`}
-            >
-              {step > s.id ? (
-                <Check className="w-3 h-3" />
-              ) : (
-                <span className="w-4 text-center">{s.id}</span>
-              )}
-              <span className="hidden sm:inline">{s.label}</span>
-            </button>
-            {i < steps.length - 1 && (
-              <div className={`w-8 h-px ${step > s.id ? "bg-emerald-500/50" : "bg-zinc-800"}`} />
-            )}
-          </div>
-        ))}
-      </div>
+      <AnalysisStepIndicator steps={steps} currentStep={step} onStepClick={setStep} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main form area */}
@@ -697,14 +594,14 @@ export default function NewAnalysisPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
-                <SliderField label="T — Qualidade Tecnica" tooltip="Avaliacao da qualidade tecnica com bola: passe, controle, finalizacao, drible (0-10)" value={technical} onChange={setTechnical} aiFilled={aiFilledFields} />
-                <SliderField label="M — Impacto de Mercado" tooltip="Impacto comercial/marca: visibilidade, camisas vendidas, atencao da midia (0-10)" value={marketImpact} onChange={setMarketImpact} aiFilled={aiFilledFields} />
-                <SliderField label="A — Adaptacao Cultural" tooltip="Score BHAR de fit cultural: idioma, estilo de vida, historico em contextos similares (0-10)" value={culturalAdaptation} onChange={setCulturalAdaptation} aiFilled={aiFilledFields} />
-                <SliderField label="N — Networking" tooltip="Beneficio de rede: compatriotas no elenco, relacao com agentes, conexoes (0-10)" value={networkingBenefit} onChange={setNetworkingBenefit} aiFilled={aiFilledFields} />
-                <SliderField label="D — Depreciacao por Idade" tooltip="Fator de curva de idade: 10 = jovem com alta valorizacao, 1 = veterano em declinio (0-10)" value={ageDepreciation} onChange={setAgeDepreciation} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="T — Qualidade Tecnica" tooltip="Avaliacao da qualidade tecnica com bola: passe, controle, finalizacao, drible (0-10)" value={technical} onChange={setTechnical} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="M — Impacto de Mercado" tooltip="Impacto comercial/marca: visibilidade, camisas vendidas, atencao da midia (0-10)" value={marketImpact} onChange={setMarketImpact} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="A — Adaptacao Cultural" tooltip="Score BHAR de fit cultural: idioma, estilo de vida, historico em contextos similares (0-10)" value={culturalAdaptation} onChange={setCulturalAdaptation} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="N — Networking" tooltip="Beneficio de rede: compatriotas no elenco, relacao com agentes, conexoes (0-10)" value={networkingBenefit} onChange={setNetworkingBenefit} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="D — Depreciacao por Idade" tooltip="Fator de curva de idade: 10 = jovem com alta valorizacao, 1 = veterano em declinio (0-10)" value={ageDepreciation} onChange={setAgeDepreciation} aiFilled={aiFilledFields} />
                 <Separator className="bg-zinc-800" />
-                <SliderField label="L — Passivos" tooltip="Risco de passivos: ratio salarial, historico de lesoes, custos ocultos (0-10, maior = pior)" value={liabilities} onChange={setLiabilities} color="red" aiFilled={aiFilledFields} />
-                <SliderField label="R — Risco Regulatorio" tooltip="Risco regulatorio: work permit, visto, impacto FFP, restricoes de registro (0-10, maior = pior)" value={regulatoryRisk} onChange={setRegulatoryRisk} color="red" aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="L — Passivos" tooltip="Risco de passivos: ratio salarial, historico de lesoes, custos ocultos (0-10, maior = pior)" value={liabilities} onChange={setLiabilities} color="red" aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="R — Risco Regulatorio" tooltip="Risco regulatorio: work permit, visto, impacto FFP, restricoes de registro (0-10, maior = pior)" value={regulatoryRisk} onChange={setRegulatoryRisk} color="red" aiFilled={aiFilledFields} />
                 <Separator className="bg-zinc-800" />
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
@@ -740,15 +637,15 @@ export default function NewAnalysisPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
-                <SliderField label="Tg — Gap Tatico" tooltip="Quao grande e a lacuna que o jogador preenche no sistema tatico (0-10, maior = preenche lacuna critica)" value={tacticalGap} onChange={setTacticalGap} aiFilled={aiFilledFields} />
-                <SliderField label="Cx — Fit Contextual" tooltip="Encaixe no sistema/formacao: quao bem o jogador se adapta ao estilo de jogo (0-10)" value={contextualFit} onChange={setContextualFit} aiFilled={aiFilledFields} />
-                <SliderField label="Ep — Perfil de Experiencia" tooltip="Experiencia em contextos similares: liga, nivel de competicao, pressao (0-10)" value={experienceProfile} onChange={setExperienceProfile} aiFilled={aiFilledFields} />
-                <SliderField label="Ni — Indice Narrativo" tooltip="Impacto narrativo: reacao da midia, torcida, vestiario (0-10)" value={narrativeIndex} onChange={setNarrativeIndex} aiFilled={aiFilledFields} />
-                <SliderField label="Mf — Fortaleza Mental" tooltip="Capacidade de lidar com pressao, jogos grandes, adversidade (0-10)" value={mentalFortitude} onChange={setMentalFortitude} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="Tg — Gap Tatico" tooltip="Quao grande e a lacuna que o jogador preenche no sistema tatico (0-10, maior = preenche lacuna critica)" value={tacticalGap} onChange={setTacticalGap} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="Cx — Fit Contextual" tooltip="Encaixe no sistema/formacao: quao bem o jogador se adapta ao estilo de jogo (0-10)" value={contextualFit} onChange={setContextualFit} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="Ep — Perfil de Experiencia" tooltip="Experiencia em contextos similares: liga, nivel de competicao, pressao (0-10)" value={experienceProfile} onChange={setExperienceProfile} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="Ni — Indice Narrativo" tooltip="Impacto narrativo: reacao da midia, torcida, vestiario (0-10)" value={narrativeIndex} onChange={setNarrativeIndex} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="Mf — Fortaleza Mental" tooltip="Capacidade de lidar com pressao, jogos grandes, adversidade (0-10)" value={mentalFortitude} onChange={setMentalFortitude} aiFilled={aiFilledFields} />
                 <Separator className="bg-zinc-800" />
-                <SliderField label="Mi — Micro-Risco Lesao" tooltip="Padrao de lesoes cronicas, fragilidade muscular, historico (0-10, maior = pior)" value={injuryMicroRisk} onChange={setInjuryMicroRisk} color="red" aiFilled={aiFilledFields} />
-                <SliderField label="S — Risco de Suspensao" tooltip="Historico disciplinar: cartoes, suspensoes, incidentes (0-10, maior = pior)" value={suspensionRisk} onChange={setSuspensionRisk} color="red" aiFilled={aiFilledFields} />
-                <SliderField label="Mj — Jitter de Mercado" tooltip="Volatilidade do mercado para este perfil de jogador (0-10, maior = mais volatil)" value={marketJitter} onChange={setMarketJitter} color="amber" aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="Mi — Micro-Risco Lesao" tooltip="Padrao de lesoes cronicas, fragilidade muscular, historico (0-10, maior = pior)" value={injuryMicroRisk} onChange={setInjuryMicroRisk} color="red" aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="S — Risco de Suspensao" tooltip="Historico disciplinar: cartoes, suspensoes, incidentes (0-10, maior = pior)" value={suspensionRisk} onChange={setSuspensionRisk} color="red" aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="Mj — Jitter de Mercado" tooltip="Volatilidade do mercado para este perfil de jogador (0-10, maior = mais volatil)" value={marketJitter} onChange={setMarketJitter} color="amber" aiFilled={aiFilledFields} />
                 <Separator className="bg-zinc-800" />
                 <div>
                   <div className="flex items-center gap-1.5 mb-1.5">
@@ -784,13 +681,13 @@ export default function NewAnalysisPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
-                <SliderField label="C1 — Habilidade Tecnica" tooltip="Score de habilidade tecnica pura: controle, passe, finalizacao, visao de jogo" value={c1} max={100} onChange={setC1} aiFilled={aiFilledFields} />
-                <SliderField label="C2 — Inteligencia Tatica" tooltip="Leitura de jogo, posicionamento, decisoes em campo, awareness" value={c2} max={100} onChange={setC2} aiFilled={aiFilledFields} />
-                <SliderField label="C3 — Perfil Fisico" tooltip="Atributos fisicos: velocidade, resistencia, forca, agilidade" value={c3} max={100} onChange={setC3} aiFilled={aiFilledFields} />
-                <SliderField label="C4 — Comportamental" tooltip="Perfil psicologico: lideranca, disciplina, resiliencia, mentalidade" value={c4} max={100} onChange={setC4} aiFilled={aiFilledFields} />
-                <SliderField label="C5 — Narrativa" tooltip="Impacto de midia/narrativa: como a contratacao e percebida publicamente" value={c5} max={100} onChange={setC5} aiFilled={aiFilledFields} />
-                <SliderField label="C6 — Economico" tooltip="Eficiencia economica: relacao custo-beneficio, potencial de valorizacao" value={c6} max={100} onChange={setC6} aiFilled={aiFilledFields} />
-                <SliderField label="C7 — Composito IA" tooltip="Score composito gerado pelo modelo de IA preditiva do CORTEX" value={c7} max={100} onChange={setC7} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="C1 — Habilidade Tecnica" tooltip="Score de habilidade tecnica pura: controle, passe, finalizacao, visao de jogo" value={c1} max={100} onChange={setC1} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="C2 — Inteligencia Tatica" tooltip="Leitura de jogo, posicionamento, decisoes em campo, awareness" value={c2} max={100} onChange={setC2} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="C3 — Perfil Fisico" tooltip="Atributos fisicos: velocidade, resistencia, forca, agilidade" value={c3} max={100} onChange={setC3} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="C4 — Comportamental" tooltip="Perfil psicologico: lideranca, disciplina, resiliencia, mentalidade" value={c4} max={100} onChange={setC4} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="C5 — Narrativa" tooltip="Impacto de midia/narrativa: como a contratacao e percebida publicamente" value={c5} max={100} onChange={setC5} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="C6 — Economico" tooltip="Eficiencia economica: relacao custo-beneficio, potencial de valorizacao" value={c6} max={100} onChange={setC6} aiFilled={aiFilledFields} />
+                <AnalysisSliderField label="C7 — Composito IA" tooltip="Score composito gerado pelo modelo de IA preditiva do CORTEX" value={c7} max={100} onChange={setC7} aiFilled={aiFilledFields} />
               </CardContent>
             </Card>
           )}

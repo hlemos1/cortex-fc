@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { memo, useState } from "react"
 import {
   Download,
   FileText,
@@ -17,7 +17,7 @@ interface ExportMenuProps {
   selectedIds?: string[]
 }
 
-export function ExportMenu({ analyses, selectedIds }: ExportMenuProps) {
+export const ExportMenu = memo(function ExportMenu({ analyses, selectedIds }: ExportMenuProps) {
   const [open, setOpen] = useState(false)
   const t = useTranslations("reports")
 
@@ -101,4 +101,4 @@ export function ExportMenu({ analyses, selectedIds }: ExportMenuProps) {
       )}
     </div>
   )
-}
+})

@@ -19,21 +19,19 @@ import {
   Share2,
   Bot,
   Trash2,
-  GripVertical,
-  AlertTriangle,
-  Clock,
-  ChevronDown,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import { NeuralRadar } from "@/components/cortex/NeuralRadar"
 import { EmptyStateCTA } from "@/components/cortex/EmptyStateCTA"
 import type { ScoutingPlayerUI } from "@/lib/db-transforms"
 import type { CortexDecision } from "@/types/cortex"
 import { ScrollFade } from "@/components/ui/scroll-fade"
+import { ScoutingPipeline } from "@/components/scouting/ScoutingPipeline"
+import { ScoutingAlerts } from "@/components/scouting/ScoutingAlerts"
+import { ScoutingSearchPanel } from "@/components/scouting/ScoutingSearchPanel"
 
 // ============================================
 // Types
@@ -629,45 +627,16 @@ export function ScoutingClient({ scoutingTargets, initialTargets }: Props) {
 
           {/* Add Player Modal */}
           {addingPlayer && (
-            <Card className="bg-zinc-900/95 border-emerald-500/20 animate-slide-up">
-              <CardContent className="pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-white font-medium">Adicionar jogador ao pipeline</p>
-                  <button onClick={() => { setAddingPlayer(false); setAddSearchResults([]) }} className="text-zinc-500 hover:text-red-400">
-                    <XCircle className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                  <Input
-                    placeholder="Buscar jogador..."
-                    value={addPlayerSearch}
-                    onChange={(e) => {
-                      setAddPlayerSearch(e.target.value)
-                      searchPlayersToAdd(e.target.value)
-                    }}
-                    className="pl-9 bg-zinc-800/40 border-zinc-700/40 text-zinc-200"
-                  />
-                </div>
-                {addSearchResults.length > 0 && (
-                  <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
-                    {addSearchResults.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => addTarget(p.id)}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-zinc-800 transition-colors flex items-center justify-between"
-                      >
-                        <div>
-                          <p className="text-sm text-white">{p.name}</p>
-                          <p className="text-xs text-zinc-500">{p.position} — {p.club}</p>
-                        </div>
-                        <Plus className="w-4 h-4 text-emerald-500" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ScoutingSearchPanel
+              addPlayerSearch={addPlayerSearch}
+              onSearchChange={(value) => {
+                setAddPlayerSearch(value)
+                searchPlayersToAdd(value)
+              }}
+              addSearchResults={addSearchResults}
+              onAddTarget={addTarget}
+              onClose={() => { setAddingPlayer(false); setAddSearchResults([]) }}
+            />
           )}
 
           {/* Targets Table */}
@@ -773,136 +742,19 @@ export function ScoutingClient({ scoutingTargets, initialTargets }: Props) {
       {/* PIPELINE TAB (Kanban with drag-and-drop) */}
       {/* ============================================ */}
       {activeTab === "pipeline" && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-pulse" />
-              <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">
-                Pipeline — {targets.length} alvos no funil
-              </p>
-            </div>
-            <Button
-              size="sm"
-              onClick={() => { setActiveTab("targets"); setAddingPlayer(true) }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              Adicionar
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {PIPELINE_STAGES.map((status) => {
-              const config = STATUS_CONFIG[status]
-              const Icon = config.icon
-              const stageTargets = pipelineByStatus[status]
-
-              return (
-                <div
-                  key={status}
-                  className="space-y-3"
-                  onDragOver={handleDragOver}
-                  onDrop={() => handleDrop(status)}
-                >
-                  <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${config.borderColor} ${config.bgColor}`}>
-                    <Icon className={`w-4 h-4 ${config.color}`} />
-                    <span className={`text-sm font-semibold ${config.color}`}>{config.label}</span>
-                    <Badge variant="secondary" className={`ml-auto ${config.bgColor} ${config.color} border ${config.borderColor} text-xs px-2 py-0.5 font-bold`}>
-                      {stageTargets.length}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-2 min-h-[120px]">
-                    {stageTargets.map((target) => (
-                      <Card
-                        key={target.id}
-                        draggable
-                        onDragStart={() => handleDragStart(target.id)}
-                        className={`bg-zinc-900/80 border-zinc-800/80 hover:border-zinc-700 transition-all p-3 cursor-grab active:cursor-grabbing group ${
-                          draggedTarget === target.id ? "opacity-50" : ""
-                        }`}
-                      >
-                        <div className="flex items-start gap-2">
-                          <GripVertical className="w-3 h-3 text-zinc-500 mt-1 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <Link href={`/players/${target.playerId}`}>
-                                <p className="text-sm font-semibold text-zinc-100 truncate hover:text-emerald-400 transition-colors">
-                                  {target.playerName}
-                                </p>
-                              </Link>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => openComments(target.id)}
-                                  className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-emerald-400 transition-all"
-                                  title="Comentarios"
-                                >
-                                  <MessageSquare className="w-3 h-3" />
-                                </button>
-                                <button
-                                  onClick={() => deleteTarget(target.id)}
-                                  className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-all"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              </div>
-                            </div>
-                            <p className="text-xs text-zinc-500 mt-0.5">
-                              {target.playerPosition ?? target.playerCluster} — {target.clubName ?? "—"}
-                            </p>
-                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                              <span className="text-xs text-zinc-400 font-mono">&euro;{target.playerMarketValue ?? 0}M</span>
-                              {target.analysis && (
-                                <>
-                                  <span className="text-xs font-mono text-emerald-400 px-1 py-0.5 rounded bg-emerald-500/[0.08]">
-                                    Vx {target.analysis.vx.toFixed(2)}
-                                  </span>
-                                  <span className="text-xs font-mono text-red-400 px-1 py-0.5 rounded bg-red-500/[0.08]">
-                                    Rx {target.analysis.rx.toFixed(2)}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                            {target.analysis && (
-                              <div className="mt-2">
-                                <DecisionBadge decision={target.analysis.decision as CortexDecision} size="sm" />
-                              </div>
-                            )}
-                            {/* Priority selector */}
-                            <div className="flex items-center gap-1 mt-2">
-                              {(["high", "medium", "low"] as const).map((p) => (
-                                <button
-                                  key={p}
-                                  onClick={() => updateTarget(target.id, { priority: p })}
-                                  className={`text-[9px] px-1.5 py-0.5 rounded-full transition-colors ${
-                                    target.priority === p
-                                      ? p === "high"
-                                        ? "bg-red-500/20 text-red-400"
-                                        : p === "medium"
-                                        ? "bg-amber-500/20 text-amber-400"
-                                        : "bg-zinc-500/20 text-zinc-400"
-                                      : "text-zinc-500 hover:text-zinc-500"
-                                  }`}
-                                >
-                                  {p === "high" ? "Alta" : p === "medium" ? "Media" : "Baixa"}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                    {stageTargets.length === 0 && (
-                      <div className="py-8 text-center text-zinc-500 text-xs border border-dashed border-zinc-800/50 rounded-xl bg-zinc-900/30">
-                        Arraste alvos aqui
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <ScoutingPipeline
+          targets={targets}
+          pipelineByStatus={pipelineByStatus}
+          draggedTarget={draggedTarget}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onOpenComments={openComments}
+          onDeleteTarget={deleteTarget}
+          onUpdateTarget={updateTarget}
+          onAddPlayer={() => { setActiveTab("targets"); setAddingPlayer(true) }}
+          statusConfig={STATUS_CONFIG}
+        />
       )}
 
       {/* ============================================ */}
@@ -1077,74 +929,11 @@ export function ScoutingClient({ scoutingTargets, initialTargets }: Props) {
       {/* ALERTS TAB */}
       {/* ============================================ */}
       {activeTab === "alerts" && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-amber-500" />
-              <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">
-                Alertas de Mercado
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={loadAlerts}
-              disabled={alertsLoading}
-              className="text-zinc-500 hover:text-emerald-400 text-xs"
-            >
-              Atualizar
-            </Button>
-          </div>
-
-          {alertsLoading && (
-            <div className="py-12 text-center text-zinc-500 text-sm">Carregando alertas...</div>
-          )}
-
-          {!alertsLoading && alerts.length === 0 && (
-            <Card className="bg-zinc-900/80 border-zinc-800">
-              <CardContent className="py-12 text-center">
-                <Bell className="w-8 h-8 text-zinc-500 mx-auto mb-3" />
-                <p className="text-zinc-500 text-sm">Nenhum alerta ativo no momento</p>
-                <p className="text-zinc-500 text-xs mt-1">Adicione jogadores ao pipeline para receber alertas</p>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="space-y-3">
-            {alerts.map((alert) => (
-              <Card
-                key={alert.id}
-                className={`bg-zinc-900/80 border-zinc-800 transition-colors hover:bg-zinc-800/40 ${
-                  alert.severity === "high" ? "border-l-2 border-l-red-500" : "border-l-2 border-l-amber-500"
-                }`}
-              >
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      alert.severity === "high" ? "bg-red-500/10" : "bg-amber-500/10"
-                    }`}>
-                      {alert.type === "contract_expiring" ? (
-                        <Clock className={`w-4 h-4 ${alert.severity === "high" ? "text-red-400" : "text-amber-400"}`} />
-                      ) : (
-                        <AlertTriangle className={`w-4 h-4 ${alert.severity === "high" ? "text-red-400" : "text-amber-400"}`} />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white font-medium">{alert.title}</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">{alert.description}</p>
-                    </div>
-                    <Link href={`/players/${alert.playerId}`}>
-                      <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-emerald-400 text-xs">
-                        Ver
-                        <ArrowRight className="w-3 h-3 ml-1" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+        <ScoutingAlerts
+          alerts={alerts}
+          alertsLoading={alertsLoading}
+          onRefresh={loadAlerts}
+        />
       )}
 
       {/* ============================================ */}

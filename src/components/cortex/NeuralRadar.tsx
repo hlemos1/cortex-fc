@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { memo, useState, useCallback } from "react"
 import {
   RadarChart,
   PolarGrid,
@@ -230,7 +230,7 @@ function CustomTickWithHover({
   )
 }
 
-export function NeuralRadar({
+export const NeuralRadar = memo(function NeuralRadar({
   layers,
   benchmarkLayers,
   benchmarkLabel,
@@ -409,4 +409,4 @@ export function NeuralRadar({
       )}
     </div>
   )
-}
+})

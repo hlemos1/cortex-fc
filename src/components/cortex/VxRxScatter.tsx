@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef, useCallback } from "react"
+import { memo, useState, useMemo, useRef, useCallback } from "react"
 import {
   ScatterChart,
   Scatter,
@@ -98,7 +98,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
   )
 }
 
-export function VxRxScatter({ data, height = 400 }: VxRxScatterProps) {
+export const VxRxScatter = memo(function VxRxScatter({ data, height = 400 }: VxRxScatterProps) {
   const [activeDecisions, setActiveDecisions] = useState<Set<CortexDecision>>(
     () => new Set(ALL_DECISIONS)
   )
@@ -309,4 +309,4 @@ export function VxRxScatter({ data, height = 400 }: VxRxScatterProps) {
       </div>
     </div>
   )
-}
+})

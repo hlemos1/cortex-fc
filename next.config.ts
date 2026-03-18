@@ -3,6 +3,13 @@ import { withSentryConfig } from "@sentry/nextjs";
 import createNextIntlPlugin from "next-intl/plugin";
 import withSerwistInit from "@serwist/next";
 
+// Bundle analyzer — only active when ANALYZE=true
+// Install: pnpm add -D @next/bundle-analyzer
+const withBundleAnalyzer = process.env.ANALYZE === "true"
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  ? require("@next/bundle-analyzer")({ enabled: true })
+  : (config: NextConfig) => config;
+
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const withSerwist = withSerwistInit({
@@ -77,7 +84,7 @@ const sentryConfig = {
   hideSourceMaps: true,
 };
 
-const baseConfig = withSerwist(withNextIntl(nextConfig));
+const baseConfig = withBundleAnalyzer(withSerwist(withNextIntl(nextConfig)));
 
 export default process.env.NEXT_PUBLIC_SENTRY_DSN
   ? withSentryConfig(baseConfig, sentryConfig)

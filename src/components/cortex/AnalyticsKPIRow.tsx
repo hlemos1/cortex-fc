@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { useTranslations } from "next-intl"
 import { Users, BarChart3, TrendingUp, ShieldAlert, Brain } from "lucide-react"
 import { AnimatedNumber } from "@/components/ui/animated-number"
@@ -65,7 +66,7 @@ const KPI_CONFIG = [
   },
 ] as const
 
-export function AnalyticsKPIRow({
+export const AnalyticsKPIRow = memo(function AnalyticsKPIRow({
   totalPlayers,
   totalAnalyses,
   avgVx,
@@ -115,4 +116,4 @@ export function AnalyticsKPIRow({
       })}
     </div>
   )
-}
+})
