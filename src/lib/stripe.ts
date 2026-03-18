@@ -49,3 +49,18 @@ export function priceIdToTier(priceId: string): TierKey | null {
   }
   return null;
 }
+
+/**
+ * Validate that all required Stripe env vars are configured.
+ */
+export function validateStripeConfig(): { valid: boolean; missing: string[] } {
+  const missing: string[] = [];
+  if (!process.env.STRIPE_SECRET_KEY) missing.push("STRIPE_SECRET_KEY");
+  if (!process.env.STRIPE_WEBHOOK_SECRET) missing.push("STRIPE_WEBHOOK_SECRET");
+  // Check at least one price is configured
+  const hasAnyPrice = Object.values(PRICE_IDS).some(
+    (tier) => tier.monthly || tier.yearly
+  );
+  if (!hasAnyPrice) missing.push("STRIPE_PRICE_* (at least one)");
+  return { valid: missing.length === 0, missing };
+}

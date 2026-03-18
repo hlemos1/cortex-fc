@@ -4,8 +4,9 @@ import { functions } from "@/inngest/functions";
 import { runAgentBackground } from "@/inngest/functions/agent-background";
 import { generateReportBackground } from "@/inngest/functions/generate-report";
 import { processScheduledReports } from "@/inngest/functions/scheduled-reports";
+import { checkTrialReminders } from "@/inngest/functions/trial-reminders";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [...functions, runAgentBackground, generateReportBackground, processScheduledReports],
+  functions: [...functions, runAgentBackground, generateReportBackground, processScheduledReports, checkTrialReminders],
 });

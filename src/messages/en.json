@@ -356,6 +356,7 @@
     "analyses": "Analyses",
     "agentRuns": "Agent runs",
     "tokensUsed": "Tokens used",
+    "reports": "Reports",
     "features": "Included features",
     "subscriptionActivated": "Subscription activated successfully! Your plan will be updated shortly.",
     "checkoutCanceled": "Checkout canceled. You can try again whenever you want.",
@@ -375,7 +376,17 @@
     "quotaWarning": "Near quota limit",
     "upgradeToUnlock": "Upgrade to unlock",
     "unlimited": "Unlimited",
-    "usageOf": "of"
+    "usageOf": "of",
+    "usageWarning": "You are close to your limit. Upgrade to continue.",
+    "currentPlanBadge": "Current",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "perMonth": "/month",
+    "perYear": "/year",
+    "free": "Free",
+    "trialActive": "Trial active",
+    "daysLeft": "days left",
+    "compare": "Compare Plans"
   },
   "auth": {
     "login": "Sign in",

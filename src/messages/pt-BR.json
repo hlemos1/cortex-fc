@@ -356,6 +356,7 @@
     "analyses": "Analises",
     "agentRuns": "Execucoes de agente",
     "tokensUsed": "Tokens consumidos",
+    "reports": "Relatorios",
     "features": "Recursos incluidos",
     "subscriptionActivated": "Assinatura ativada com sucesso! Seu plano sera atualizado em instantes.",
     "checkoutCanceled": "Checkout cancelado. Voce pode tentar novamente quando quiser.",
@@ -375,7 +376,17 @@
     "quotaWarning": "Proximo do limite",
     "upgradeToUnlock": "Faca upgrade para desbloquear",
     "unlimited": "Ilimitado",
-    "usageOf": "de"
+    "usageOf": "de",
+    "usageWarning": "Voce esta proximo do limite. Faca upgrade para continuar usando.",
+    "currentPlanBadge": "Atual",
+    "monthly": "Mensal",
+    "yearly": "Anual",
+    "perMonth": "/mes",
+    "perYear": "/ano",
+    "free": "Gratuito",
+    "trialActive": "Trial ativo",
+    "daysLeft": "dias restantes",
+    "compare": "Comparar Planos"
   },
   "auth": {
     "login": "Entrar",

@@ -5,6 +5,7 @@ import { getStripe } from "@/lib/stripe";
 import { db } from "@/db/index";
 import { organizations } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -22,23 +23,48 @@ export async function POST(req: Request) {
       where: eq(organizations.id, session!.orgId),
     });
 
-    if (!org?.stripeCustomerId) {
+    if (!org) {
       return NextResponse.json(
-        { error: "Nenhuma assinatura ativa encontrada" },
-        { status: 400 }
+        { error: "Organizacao nao encontrada" },
+        { status: 404 }
       );
     }
 
-    const origin = req.headers.get("origin") ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+    let customerId = org.stripeCustomerId;
+
+    // If org doesn't have a Stripe customer yet, create one
+    if (!customerId) {
+      const customer = await getStripe().customers.create({
+        metadata: { orgId: org.id },
+        name: org.name,
+      });
+      customerId = customer.id;
+
+      await db
+        .update(organizations)
+        .set({ stripeCustomerId: customerId })
+        .where(eq(organizations.id, org.id));
+
+      logger.info("Created Stripe customer for portal access", {
+        orgId: org.id,
+        stripeCustomerId: customerId,
+      });
+    }
+
+    const origin =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      req.headers.get("origin") ??
+      process.env.NEXTAUTH_URL ??
+      "http://localhost:3000";
 
     const portalSession = await getStripe().billingPortal.sessions.create({
-      customer: org.stripeCustomerId,
+      customer: customerId,
       return_url: `${origin}/billing`,
     });
 
     return NextResponse.json({ url: portalSession.url });
   } catch (err) {
-    console.error("Stripe portal error:", err);
+    logger.error("Stripe portal error", {}, err instanceof Error ? err : undefined);
     return NextResponse.json(
       { error: "Erro ao abrir portal de pagamento" },
       { status: 500 }

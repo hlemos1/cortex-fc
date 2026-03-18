@@ -5,6 +5,7 @@ import { getStripe, PRICE_IDS, type TierKey, type BillingInterval } from "@/lib/
 import { db } from "@/db/index";
 import { organizations } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     const priceId = PRICE_IDS[tier][interval];
     if (!priceId) {
       return NextResponse.json(
-        { error: `Preco nao configurado para ${tier} (${interval})` },
+        { error: "Plano nao configurado. Configure STRIPE_PRICE_* no ambiente." },
         { status: 400 }
       );
     }
@@ -70,8 +71,15 @@ export async function POST(req: Request) {
         .where(eq(organizations.id, org.id));
     }
 
-    // Create checkout session
-    const origin = req.headers.get("origin") ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+    // Use NEXT_PUBLIC_APP_URL as primary, then origin header, then NEXTAUTH_URL
+    const origin =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      req.headers.get("origin") ??
+      process.env.NEXTAUTH_URL ??
+      "http://localhost:3000";
+
+    // Trial only applies if org is currently on free tier
+    const trialDays = org.tier === "free" ? 14 : undefined;
 
     const checkoutSession = await getStripe().checkout.sessions.create({
       customer: customerId,
@@ -82,19 +90,23 @@ export async function POST(req: Request) {
       metadata: {
         orgId: org.id,
         tier,
+        userId: session!.userId,
+        interval,
       },
       subscription_data: {
         metadata: {
           orgId: org.id,
           tier,
+          userId: session!.userId,
+          interval,
         },
-        trial_period_days: org.tier === "free" ? 14 : undefined,
+        trial_period_days: trialDays,
       },
     });
 
     return NextResponse.json({ url: checkoutSession.url });
   } catch (err) {
-    console.error("Stripe checkout error:", err);
+    logger.error("Stripe checkout error", {}, err instanceof Error ? err : undefined);
     return NextResponse.json(
       { error: "Erro ao criar sessao de pagamento" },
       { status: 500 }
