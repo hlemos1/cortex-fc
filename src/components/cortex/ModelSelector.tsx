@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { cn } from "@/lib/utils"
 import { Cpu, Zap, Crown } from "lucide-react"
 import type { AIModel } from "@/lib/ai-models"
@@ -11,7 +12,7 @@ interface ModelSelectorProps {
   className?: string
 }
 
-export function ModelSelector({ models, selectedModel, onSelect, className }: ModelSelectorProps) {
+export const ModelSelector = memo(function ModelSelector({ models, selectedModel, onSelect, className }: ModelSelectorProps) {
   const icons = {
     fast: Zap,
     standard: Cpu,
@@ -50,4 +51,4 @@ export function ModelSelector({ models, selectedModel, onSelect, className }: Mo
       })}
     </div>
   )
-}
+})

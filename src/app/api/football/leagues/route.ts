@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth-helpers"
 import { getCountries, getLeagues } from "@/services/api-football"
+import { withCacheHeaders, CACHE_LONG } from "@/lib/cache-headers"
 
 /**
  * GET /api/football/leagues?country=Brazil
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 
     if (countriesOnly === "true") {
       const countries = await getCountries()
-      return NextResponse.json({ data: countries })
+      return withCacheHeaders(NextResponse.json({ data: countries }), CACHE_LONG)
     }
 
     const leagues = await getLeagues({
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
       search: search ?? undefined,
     })
 
-    return NextResponse.json({ data: leagues })
+    return withCacheHeaders(NextResponse.json({ data: leagues }), CACHE_LONG)
   } catch (err) {
     console.error("Football leagues fetch failed:", err)
     const message = err instanceof Error ? err.message : "Fetch failed"

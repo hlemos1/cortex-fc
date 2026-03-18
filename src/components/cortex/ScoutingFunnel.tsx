@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { memo, useMemo } from "react"
 
 interface ScoutingFunnelProps {
   data: { stage: string; count: number }[]
@@ -13,7 +13,7 @@ const STAGE_COLORS = [
   { bg: "bg-cyan-500/10", border: "border-cyan-500/30", bar: "#06b6d4", text: "text-cyan-300" },
 ]
 
-export function ScoutingFunnel({ data }: ScoutingFunnelProps) {
+export const ScoutingFunnel = memo(function ScoutingFunnel({ data }: ScoutingFunnelProps) {
   const maxCount = useMemo(() => Math.max(...data.map((d) => d.count), 1), [data])
   const total = useMemo(() => (data.length > 0 ? data[0].count : 0), [data])
 
@@ -82,4 +82,4 @@ export function ScoutingFunnel({ data }: ScoutingFunnelProps) {
       })}
     </div>
   )
-}
+})

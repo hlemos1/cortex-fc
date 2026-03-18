@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { memo, useState, useTransition } from "react"
 import { Heart } from "lucide-react"
 
 interface WatchlistButtonProps {
@@ -8,7 +8,7 @@ interface WatchlistButtonProps {
   initialWatched: boolean
 }
 
-export function WatchlistButton({ playerId, initialWatched }: WatchlistButtonProps) {
+export const WatchlistButton = memo(function WatchlistButton({ playerId, initialWatched }: WatchlistButtonProps) {
   const [watched, setWatched] = useState(initialWatched)
   const [isPending, startTransition] = useTransition()
 
@@ -54,4 +54,4 @@ export function WatchlistButton({ playerId, initialWatched }: WatchlistButtonPro
       />
     </button>
   )
-}
+})

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth-helpers"
 import { getTeams } from "@/services/api-football"
+import { withCacheHeaders, CACHE_MEDIUM } from "@/lib/cache-headers"
 
 export async function GET(request: Request) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
     }
 
     const teams = await getTeams(Number(league), Number(season))
-    return NextResponse.json({ data: teams })
+    return withCacheHeaders(NextResponse.json({ data: teams }), CACHE_MEDIUM)
   } catch (err) {
     console.error("Football teams fetch failed:", err)
     const message = err instanceof Error ? err.message : "Fetch failed"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { memo, useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 import { User } from "lucide-react"
@@ -20,7 +20,7 @@ interface ActivityTimelineProps {
   className?: string
 }
 
-export function ActivityTimeline({ entityType, entityId, className }: ActivityTimelineProps) {
+export const ActivityTimeline = memo(function ActivityTimeline({ entityType, entityId, className }: ActivityTimelineProps) {
   const [entries, setEntries] = useState<ActivityEntry[]>([])
   const [loading, setLoading] = useState(true)
   const t = useTranslations("activity")
@@ -62,7 +62,7 @@ export function ActivityTimeline({ entityType, entityId, className }: ActivityTi
       </div>
     </div>
   )
-}
+})
 
 function formatAction(
   action: string,

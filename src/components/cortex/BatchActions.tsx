@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { memo, useState } from "react"
 import { CheckSquare, Square, FileText, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 
@@ -12,7 +12,7 @@ interface BatchActionsProps {
   onBatchGenerate: (template: string) => Promise<void>
 }
 
-export function BatchActions({
+export const BatchActions = memo(function BatchActions({
   selectedIds,
   totalCount,
   onSelectAll,
@@ -70,4 +70,4 @@ export function BatchActions({
       </button>
     </div>
   )
-}
+})

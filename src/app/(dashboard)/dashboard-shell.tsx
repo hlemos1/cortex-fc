@@ -45,20 +45,20 @@ import {
 } from "@/components/ui/tooltip"
 
 const navItemDefs = [
-  { href: "/dashboard", key: "dashboard" as const, icon: LayoutDashboard },
-  { href: "/players", key: "players" as const, icon: Users },
-  { href: "/analysis", key: "analysis" as const, icon: Activity },
-  { href: "/scouting", key: "scouting" as const, icon: Search },
-  { href: "/reports", key: "reports" as const, icon: FileText },
-  { href: "/chat", key: "chat" as const, icon: MessageSquare },
-  { href: "/simulator", key: "simulator" as const, icon: ArrowRightLeft },
-  { href: "/analytics", key: "analytics" as const, icon: BarChart3 },
-  { href: "/notifications", key: "notifications" as const, icon: Bell },
-  { href: "/agent-console", key: "agentConsole" as const, icon: Monitor },
-  { href: "/holding", key: "holding" as const, icon: Building2 },
-  { href: "/audit-log", key: "auditLog" as const, icon: Shield },
-  { href: "/billing", key: "billing" as const, icon: CreditCard },
-  { href: "/settings", key: "settings" as const, icon: Settings },
+  { href: "/dashboard", key: "dashboard" as const, icon: LayoutDashboard, prefetch: true },
+  { href: "/players", key: "players" as const, icon: Users, prefetch: true },
+  { href: "/analysis", key: "analysis" as const, icon: Activity, prefetch: true },
+  { href: "/scouting", key: "scouting" as const, icon: Search, prefetch: true },
+  { href: "/reports", key: "reports" as const, icon: FileText, prefetch: true },
+  { href: "/chat", key: "chat" as const, icon: MessageSquare, prefetch: false },
+  { href: "/simulator", key: "simulator" as const, icon: ArrowRightLeft, prefetch: false },
+  { href: "/analytics", key: "analytics" as const, icon: BarChart3, prefetch: false },
+  { href: "/notifications", key: "notifications" as const, icon: Bell, prefetch: false },
+  { href: "/agent-console", key: "agentConsole" as const, icon: Monitor, prefetch: false },
+  { href: "/holding", key: "holding" as const, icon: Building2, prefetch: false },
+  { href: "/audit-log", key: "auditLog" as const, icon: Shield, prefetch: false },
+  { href: "/billing", key: "billing" as const, icon: CreditCard, prefetch: false },
+  { href: "/settings", key: "settings" as const, icon: Settings, prefetch: false },
 ]
 
 export default function DashboardShell({
@@ -118,6 +118,7 @@ export default function DashboardShell({
           const linkContent = (
             <Link
               href={item.href}
+              prefetch={item.prefetch}
               onClick={() => setMobileOpen(false)}
               className={cn(
                 "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",

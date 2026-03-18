@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth-helpers"
 import { getSeasons, getCurrentSeason } from "@/db/queries"
+import { withCacheHeaders, CACHE_LONG } from "@/lib/cache-headers"
 
 export async function GET(req: NextRequest) {
   const { session, error } = await requireAuth()
@@ -12,9 +13,9 @@ export async function GET(req: NextRequest) {
 
   if (current === "true" && leagueId) {
     const season = await getCurrentSeason(leagueId)
-    return NextResponse.json({ season })
+    return withCacheHeaders(NextResponse.json({ season }), CACHE_LONG)
   }
 
   const seasons = await getSeasons(leagueId ?? undefined)
-  return NextResponse.json({ seasons })
+  return withCacheHeaders(NextResponse.json({ seasons }), CACHE_LONG)
 }

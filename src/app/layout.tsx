@@ -59,6 +59,9 @@ export const metadata: Metadata = {
     "transfer decisions", "neural analytics", "player analysis", "football intelligence",
     "analise futebol", "inteligencia artificial futebol", "scouting futebol",
   ],
+  other: {
+    "theme-color": "#10b981",
+  },
 }
 
 export default async function RootLayout({

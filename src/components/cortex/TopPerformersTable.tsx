@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { DecisionBadge } from "@/components/cortex/DecisionBadge"
 import type { CortexDecision } from "@/types/cortex"
@@ -32,9 +33,11 @@ function PlayerAvatar({ name, photoUrl }: { name: string; photoUrl: string | nul
 
   if (photoUrl) {
     return (
-      <img
+      <Image
         src={photoUrl}
         alt={name}
+        width={36}
+        height={36}
         className="w-9 h-9 rounded-full object-cover ring-1 ring-zinc-700"
       />
     )

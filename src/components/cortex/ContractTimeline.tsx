@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import Link from "next/link"
 
 interface ContractTimelineProps {
@@ -39,7 +40,7 @@ function formatValue(value: number): string {
   return value.toString()
 }
 
-export function ContractTimeline({ data }: ContractTimelineProps) {
+export const ContractTimeline = memo(function ContractTimeline({ data }: ContractTimelineProps) {
   if (data.length === 0) {
     return (
       <div className="h-48 flex items-center justify-center text-zinc-500 text-sm">
@@ -129,4 +130,4 @@ export function ContractTimeline({ data }: ContractTimelineProps) {
       </div>
     </div>
   )
-}
+})

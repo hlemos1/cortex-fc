@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Brain,
   Building2,
@@ -524,9 +525,11 @@ export default function OnboardingPage() {
                           }`}
                         >
                           {l.league.logo && (
-                            <img
+                            <Image
                               src={l.league.logo}
                               alt={l.league.name}
+                              width={32}
+                              height={32}
                               className="w-8 h-8 object-contain"
                             />
                           )}
@@ -620,9 +623,11 @@ export default function OnboardingPage() {
                           }`}
                         >
                           {t.team.logo && (
-                            <img
+                            <Image
                               src={t.team.logo}
                               alt={t.team.name}
+                              width={40}
+                              height={40}
                               className="w-10 h-10 object-contain"
                             />
                           )}

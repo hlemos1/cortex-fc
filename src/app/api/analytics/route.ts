@@ -8,6 +8,7 @@ import {
   getAnalysesPerDayByOrg,
   getOrgScnTrend,
 } from "@/db/queries/analytics"
+import { withCacheHeaders, CACHE_SHORT } from "@/lib/cache-headers"
 
 export async function GET(req: NextRequest) {
   const { session, error } = await requireAuth()
@@ -18,30 +19,36 @@ export async function GET(req: NextRequest) {
 
   switch (metric) {
     case "analyses_per_day":
-      return NextResponse.json({
-        data: await getAnalysesPerDayByOrg(session!.orgId),
-      })
+      return withCacheHeaders(
+        NextResponse.json({ data: await getAnalysesPerDayByOrg(session!.orgId) }),
+        CACHE_SHORT,
+      )
     case "agent_cost":
-      return NextResponse.json({
-        data: await getAgentCostPerWeek(session!.orgId),
-      })
+      return withCacheHeaders(
+        NextResponse.json({ data: await getAgentCostPerWeek(session!.orgId) }),
+        CACHE_SHORT,
+      )
     case "scn_trend":
-      return NextResponse.json({
-        data: await getOrgScnTrend(session!.orgId),
-      })
+      return withCacheHeaders(
+        NextResponse.json({ data: await getOrgScnTrend(session!.orgId) }),
+        CACHE_SHORT,
+      )
     case "usage":
-      return NextResponse.json({
-        data: await getOrgUsageThisMonth(session!.orgId),
-      })
+      return withCacheHeaders(
+        NextResponse.json({ data: await getOrgUsageThisMonth(session!.orgId) }),
+        CACHE_SHORT,
+      )
     default: {
-      // Return all metrics
       const [analysesPerDay, agentCost, scnTrend, usage] = await Promise.all([
         getAnalysesPerDayByOrg(session!.orgId),
         getAgentCostPerWeek(session!.orgId),
         getOrgScnTrend(session!.orgId),
         getOrgUsageThisMonth(session!.orgId),
       ])
-      return NextResponse.json({ analysesPerDay, agentCost, scnTrend, usage })
+      return withCacheHeaders(
+        NextResponse.json({ analysesPerDay, agentCost, scnTrend, usage }),
+        CACHE_SHORT,
+      )
     }
   }
 }

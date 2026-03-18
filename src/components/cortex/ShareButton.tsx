@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { memo, useState, useRef, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { Share2, Copy, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ interface ShareButtonProps {
 
 type Expiration = 7 | 30 | 0
 
-export function ShareButton({ viewType, viewConfig, title }: ShareButtonProps) {
+export const ShareButton = memo(function ShareButton({ viewType, viewConfig, title }: ShareButtonProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
@@ -170,4 +170,4 @@ export function ShareButton({ viewType, viewConfig, title }: ShareButtonProps) {
       )}
     </div>
   )
-}
+})
