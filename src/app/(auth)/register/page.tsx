@@ -106,18 +106,22 @@ export default function RegisterPage() {
         return
       }
 
-      // Auto login after register
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        setError("Conta criada, mas erro ao fazer login. Tente fazer login manualmente.")
-        setLoading(false)
+      if (data.requiresVerification) {
+        // Show verification message
+        router.push("/check-email?email=" + encodeURIComponent(email))
       } else {
-        router.push("/onboarding")
+        // Fallback: auto login
+        const result = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        })
+        if (result?.error) {
+          setError("Conta criada, mas erro ao fazer login.")
+          setLoading(false)
+        } else {
+          router.push("/onboarding")
+        }
       }
     } catch {
       setError("Erro ao criar conta. Tente novamente.")

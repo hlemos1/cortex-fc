@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { isValidEmail, isStrongPassword } from "@/lib/validation";
 import { checkRateLimit, authRateLimit } from "@/lib/rate-limit";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendVerificationEmail } from "@/lib/email";
 import { analyzeInput } from "@/lib/request-sanitizer";
 
 export async function POST(req: Request) {
@@ -118,13 +118,24 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    // Send welcome email (don't fail registration if email fails)
-    sendWelcomeEmail(user.email, user.name).catch((err) => {
-      console.error("Failed to send welcome email:", err);
+    // Generate verification token
+    const crypto = await import("crypto");
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
+    await db
+      .update(users)
+      .set({ verificationToken, verificationTokenExpiry })
+      .where(eq(users.id, user.id));
+
+    // Send verification email (don't fail registration if email fails)
+    sendVerificationEmail(user.email, user.name, verificationToken).catch((err) => {
+      console.error("Failed to send verification email:", err);
     });
 
     return NextResponse.json({
       success: true,
+      requiresVerification: true,
       user: { id: user.id, name: user.name, email: user.email },
     });
   } catch (error) {

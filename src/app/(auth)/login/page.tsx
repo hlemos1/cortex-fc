@@ -2,16 +2,19 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
-import { Brain, Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react"
+import { Brain, Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle2 } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const verified = searchParams.get("verified") === "true"
+  const urlError = searchParams.get("error")
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [error, setError] = useState(urlError ?? "")
   const [loading, setLoading] = useState(false)
 
   async function handleLogin(e: React.FormEvent) {
@@ -48,6 +51,14 @@ export default function LoginPage() {
               NEURAL ANALYTICS
             </p>
           </div>
+
+          {/* Verified banner */}
+          {verified && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 mb-4">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <p className="text-xs text-emerald-400">Email verificado com sucesso. Faca login.</p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-4">

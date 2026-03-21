@@ -32,7 +32,7 @@ async function getOrCreateGoogleUser(profile: {
       })
       .returning()
 
-    // Create user (no password needed for Google users)
+    // Create user (no password needed for Google users, email auto-verified)
     const [newUser] = await db
       .insert(users)
       .values({
@@ -42,6 +42,7 @@ async function getOrCreateGoogleUser(profile: {
         avatarUrl: profile.picture ?? null,
         orgId: org.id,
         role: "admin",
+        emailVerified: new Date(),
       })
       .returning()
 
@@ -145,6 +146,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const isValid = await bcrypt.compare(password, user.passwordHash)
         if (!isValid) return null
+
+        // Check email verification (skip for existing users without the field)
+        if (user.verificationToken && !user.emailVerified) {
+          throw new Error("Email nao verificado. Verifique sua caixa de entrada.")
+        }
 
         // Get org name
         let orgName = ""

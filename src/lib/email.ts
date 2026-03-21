@@ -202,6 +202,38 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<boolea
   });
 }
 
+export async function sendVerificationEmail(to: string, name: string, token: string): Promise<boolean> {
+  const verifyUrl = `${APP_URL}/api/verify-email?token=${token}`;
+
+  return sendEmail({
+    to,
+    subject: "Confirme seu email — CORTEX FC",
+    html: wrap(`
+      <h1 style="margin:0 0 8px;color:#e4e4e7;font-size:22px;font-weight:700;">
+        Confirme seu email, ${name}
+      </h1>
+      <p style="margin:0 0 8px;color:#a1a1aa;font-size:14px;">
+        Clique no botao abaixo para ativar sua conta no CORTEX FC.
+      </p>
+      <p style="margin:0 0 24px;color:#fbbf24;font-size:13px;font-weight:500;">
+        &#x26A0;&#xFE0F; Este link expira em 24 horas.
+      </p>
+
+      ${ctaButton("Confirmar Email", verifyUrl)}
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#09090b;border-radius:8px;">
+        <tr>
+          <td style="padding:12px 16px;">
+            <p style="margin:0;color:#52525b;font-size:12px;">
+              Se voce nao criou esta conta, ignore este email.
+            </p>
+          </td>
+        </tr>
+      </table>
+    `),
+  });
+}
+
 export async function sendAnalysisCompleteEmail(
   to: string,
   playerName: string,
