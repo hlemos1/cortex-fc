@@ -28,7 +28,7 @@ export default auth(async (req) => {
   const isLoggedIn = !!req.auth
   const isApiRoute = pathname.startsWith("/api/")
   const isAuthRoute = pathname.startsWith("/api/auth")
-  const isRegisterRoute = pathname.startsWith("/api/register")
+  const isRegisterRoute = pathname.startsWith("/api/register") || pathname.startsWith("/api/forgot-password") || pathname.startsWith("/api/reset-password")
   const isPublicPage = pathname === "/" || pathname === "/pricing" || pathname.startsWith("/termos") || pathname.startsWith("/privacidade")
 
   const log = createRequestLogger(requestId, {

@@ -108,15 +108,12 @@ export default function LoginPage() {
 
             {/* Forgot password */}
             <div className="flex justify-end">
-              <span className="text-xs text-zinc-500">
-                Esqueceu a senha?{" "}
-                <a
-                  href="mailto:contato@cortexfc.com"
-                  className="text-emerald-500 hover:text-emerald-400 transition-colors"
-                >
-                  contato@cortexfc.com
-                </a>
-              </span>
+              <Link
+                href="/forgot-password"
+                className="text-xs text-emerald-500 hover:text-emerald-400 transition-colors"
+              >
+                Esqueceu a senha?
+              </Link>
             </div>
 
             {/* Submit */}

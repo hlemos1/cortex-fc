@@ -91,6 +91,8 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   orgId: uuid("org_id").references(() => organizations.id),
   role: text("role").default("analyst").notNull(), // admin, analyst, viewer
+  resetToken: text("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
