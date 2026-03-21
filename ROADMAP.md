@@ -95,11 +95,11 @@ Plataforma SaaS de analytics neural para futebol profissional. 6 agentes IA (Cla
 | # | Task | Detalhe | Status |
 |---|------|---------|--------|
 | 7 | Dominio customizado (cortexfc.com) | Registrar dominio + configurar na Vercel | Pendente |
-| 8 | Verificacao de email no registro | Token + link de ativacao via Resend | Parcial (lib/email.ts existe, fluxo nao integrado) |
+| 8 | Verificacao de email no registro | Token + link de ativacao via Resend | ✅ FEITO |
 | 9 | Reset de senha | Fluxo forgot-password com token por email | ✅ FEITO |
-| 10 | Fotos de jogadores via API-Football | photoUrl no seed esta null | Pendente |
+| 10 | Fotos de jogadores via API-Football | 55/55 jogadores com foto via API-Football IDs | ✅ FEITO |
 | 11 | PostHog analytics | Tracking de eventos: signup, analise criada, agente usado | Pendente |
-| 12 | Toast notifications globais | Feedback visual pra acoes (salvar, deletar, erro) | ✅ FEITO (chat, analysis, exports) |
+| 12 | Toast notifications globais | Feedback visual pra acoes (salvar, deletar, erro) | ✅ FEITO |
 
 ### P2 — Melhorias Tecnicas
 
