@@ -81,33 +81,33 @@ Plataforma SaaS de analytics neural para futebol profissional. 6 agentes IA (Cla
 
 ### P0 — Bloqueadores de Revenue
 
-| # | Task | Detalhe | Estimativa |
-|---|------|---------|-----------|
-| 1 | Configurar ANTHROPIC_API_KEY na Vercel | Sem ela, todos os agentes retornam 503 | 5 min |
-| 2 | Configurar Upstash Redis na Vercel | Rate limiting e cache operam em modo passthrough sem Redis | 10 min |
-| 3 | Criar produtos no Stripe Dashboard | 3 produtos (Scout €49, Club €299, Holding €899) + copiar keys pra Vercel | 20 min |
-| 4 | Rodar seed no banco de producao | DB esta vazio — precisa dos 55 jogadores + clubes + ligas pra demo funcionar | 5 min |
-| 5 | Testar fluxo completo E2E em producao | Register → Login → Dashboard → Analise → Agente → Chat → Scouting | 30 min |
+| # | Task | Detalhe | Status |
+|---|------|---------|--------|
+| 1 | Configurar env vars na Vercel | 27 variaveis (DB, Auth, Stripe, Anthropic, Redis, Sentry, API-Football) | ✅ FEITO |
+| 2 | Fix build Vercel (pnpm detection) | packageManager field adicionado ao package.json | ✅ FEITO |
+| 3 | Fix validacao de senha frontend | Alinhado com backend (8 chars + maiuscula + minuscula + numero) | ✅ FEITO |
+| 4 | Fix links Termos/Privacidade | Apontavam para # — agora apontam para /termos e /privacidade | ✅ FEITO |
+| 5 | Anthropic client error handling | Lazy init com mensagem clara quando API key falta | ✅ FEITO |
+| 6 | Testar fluxo completo E2E em producao | Register → Login → Dashboard → Analise → Agente → Chat → Scouting | Pendente |
 
 ### P1 — Qualidade de Produto
 
 | # | Task | Detalhe | Status |
 |---|------|---------|--------|
-| 6 | Dominio customizado (cortexfc.com) | Registrar dominio + configurar na Vercel | Pendente |
-| 7 | Verificacao de email no registro | Token + link de ativacao via Resend | Parcial (lib/email.ts existe, fluxo nao integrado) |
-| 8 | Reset de senha | Fluxo forgot-password com token por email | Pendente |
-| 9 | Fotos de jogadores via API-Football | photoUrl no seed esta null | Pendente |
-| 10 | PostHog analytics | Tracking de eventos: signup, analise criada, agente usado | Pendente |
-| 11 | Toast notifications globais | Feedback visual pra acoes (salvar, deletar, erro) | Pendente |
+| 7 | Dominio customizado (cortexfc.com) | Registrar dominio + configurar na Vercel | Pendente |
+| 8 | Verificacao de email no registro | Token + link de ativacao via Resend | Parcial (lib/email.ts existe, fluxo nao integrado) |
+| 9 | Reset de senha | Fluxo forgot-password com token por email | ✅ FEITO |
+| 10 | Fotos de jogadores via API-Football | photoUrl no seed esta null | Pendente |
+| 11 | PostHog analytics | Tracking de eventos: signup, analise criada, agente usado | Pendente |
+| 12 | Toast notifications globais | Feedback visual pra acoes (salvar, deletar, erro) | ✅ FEITO (chat, analysis, exports) |
 
 ### P2 — Melhorias Tecnicas
 
 | # | Task | Detalhe | Status |
 |---|------|---------|--------|
-| 12 | neuralAnalyses.orgId | Adicionar coluna direto na tabela (elimina subquery via analystId) | Pendente |
-| 13 | JWT refresh token rotation | Rotacao a cada 7 dias | Pendente |
-| 14 | Zod validation nos agent inputs | Schema validation nas rotas dos 6 agentes | Pendente |
-| 15 | Zod validation nos agent outputs | Validar JSON parseado do Claude em base-agent.ts | Pendente |
+| 13 | neuralAnalyses.orgId | Adicionar coluna direto na tabela (elimina subquery via analystId) | Pendente |
+| 14 | JWT refresh token rotation | Rotacao a cada 7 dias | Pendente |
+| 15 | Zod validation nos agent inputs/outputs | Schema validation nas rotas dos 6 agentes | Pendente (validacao manual ja funciona) |
 | 16 | CORS origin whitelist | Substituir wildcard *.vercel.app por dominios especificos | Pendente (apos dominio customizado) |
 | 17 | Cache key com prefixo de ambiente | Evitar colisao dev/staging/prod no Redis | Pendente |
 | 18 | Soft delete (deletedAt) | Em players, analyses, users | Pendente |
