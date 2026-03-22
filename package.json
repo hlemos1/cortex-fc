@@ -26,7 +26,7 @@
     "@auth/drizzle-adapter": "^1.11.1",
     "@neondatabase/serverless": "^1.0.2",
     "@react-pdf/renderer": "^4.3.2",
-    "@sentry/nextjs": "^10.43.0",
+    "@sentry/nextjs": "^10.45.0",
     "@serwist/next": "^9.5.7",
     "@stripe/stripe-js": "^8.9.0",
     "@upstash/ratelimit": "^2.0.8",
