@@ -149,7 +149,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // Check email verification (skip for existing users without the field)
         if (user.verificationToken && !user.emailVerified) {
-          throw new Error("Email nao verificado. Verifique sua caixa de entrada.")
+          return null
         }
 
         // Get org name

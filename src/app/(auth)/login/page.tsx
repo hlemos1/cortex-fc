@@ -29,7 +29,22 @@ export default function LoginPage() {
     })
 
     if (result?.error) {
-      setError("Email ou senha incorretos")
+      // Check if the failure is due to unverified email
+      try {
+        const check = await fetch("/api/auth/check-verification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        })
+        const data = await check.json()
+        if (data.status === "unverified") {
+          setError("Email nao verificado. Verifique sua caixa de entrada e clique no link de confirmacao.")
+        } else {
+          setError("Email ou senha incorretos")
+        }
+      } catch {
+        setError("Email ou senha incorretos")
+      }
       setLoading(false)
     } else {
       router.push("/dashboard")
