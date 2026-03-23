@@ -5,7 +5,7 @@
  * In dev mode (no key), logs emails to console instead of sending.
  */
 
-const FROM_EMAIL = process.env.EMAIL_FROM ?? "CORTEX FC <noreply@cortexfc.com>";
+const FROM_EMAIL = process.env.EMAIL_FROM ?? "CORTEX FC <onboarding@resend.dev>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://cortex-fc.vercel.app";
 
 interface SendEmailOptions {
