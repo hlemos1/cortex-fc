@@ -22,6 +22,9 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
   }
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -34,7 +37,10 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
         subject,
         html,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (!res.ok) {
       const error = await res.text();
