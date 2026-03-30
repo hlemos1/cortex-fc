@@ -1,0 +1,26 @@
+name: Feature Request
+description: Sugerir nova funcionalidade
+title: "[FEAT] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: O que
+      description: Descreva a funcionalidade
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Por que
+      description: Qual problema resolve?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterio de aceite
+      description: Como saber que esta pronto?
+    validations:
+      required: true
