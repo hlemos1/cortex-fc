@@ -9,6 +9,7 @@ import {
   deleteConversation,
 } from "@/db/queries";
 import { analyzeInput } from "@/lib/request-sanitizer";
+import { parseBody, chatRequestSchema } from "@/lib/api-schemas";
 
 /**
  * GET /api/chat — List conversations or get messages
@@ -65,7 +66,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
+    const { data: body, error: parseError } = await parseBody(request, chatRequestSchema);
+    if (parseError) return parseError;
 
     // Create new conversation
     if (body.action === "create") {

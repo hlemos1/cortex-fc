@@ -7,6 +7,7 @@ import { canUseAgent, checkAgentQuota } from "@/lib/feature-gates";
 import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
 import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
+import { parseBody, agentRequestSchema } from "@/lib/api-schemas";
 
 export async function POST(req: Request) {
   try {
@@ -52,7 +53,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
+    const { data: validatedBody, error: parseError } = await parseBody(req, agentRequestSchema);
+    if (parseError) return parseError;
+    const body = validatedBody as Record<string, any>;
     const { playerId, proposedFee, proposedSalary, contractYears, sellingClubAsk } = body;
 
     // Model selection with tier validation

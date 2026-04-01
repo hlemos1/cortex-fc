@@ -9,6 +9,7 @@ import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { checkAndAlertUsage } from "@/lib/cost-alerts";
 import { inngest } from "@/lib/inngest-client";
 import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
+import { parseBody, agentRequestSchema } from "@/lib/api-schemas";
 
 export async function POST(req: Request) {
   try {
@@ -56,7 +57,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
+    const { data: body, error: parseError } = await parseBody(req, agentRequestSchema);
+    if (parseError) return parseError;
+
     const {
       playerId,
       clubContextId,

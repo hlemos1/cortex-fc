@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/rbac";
 import { createOrgInvite, getOrgInvites } from "@/db/queries";
 import { sendEmail } from "@/lib/email";
 import crypto from "crypto";
+import { parseBody, inviteSchema } from "@/lib/api-schemas";
 
 export async function GET() {
   try {
@@ -31,16 +32,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sem permissao para gerenciar equipe" }, { status: 403 });
     }
 
-    const body = await req.json();
+    const { data: body, error: parseError } = await parseBody(req, inviteSchema);
+    if (parseError) return parseError;
     const { email, role } = body;
-
-    if (!email || !role) {
-      return NextResponse.json({ error: "email e role sao obrigatorios" }, { status: 400 });
-    }
-
-    if (!["admin", "analyst", "viewer"].includes(role)) {
-      return NextResponse.json({ error: "Role invalido" }, { status: 400 });
-    }
 
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date();

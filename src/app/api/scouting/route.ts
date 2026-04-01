@@ -9,6 +9,7 @@ import { inngest } from "@/lib/inngest-client";
 import { invalidateOnMutation } from "@/lib/cache";
 import { checkUsageLimit } from "@/lib/feature-gates";
 import { analyzeInput } from "@/lib/request-sanitizer";
+import { parseBody, scoutingCreateSchema } from "@/lib/api-schemas";
 
 // GET — list scouting targets for the org
 export async function GET() {
@@ -105,7 +106,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
+    const { data: body, error: parseError } = await parseBody(request, scoutingCreateSchema);
+    if (parseError) return parseError;
     const { playerId, priority, notes, targetPrice } = body;
 
     if (!playerId || !isValidUUID(playerId)) {

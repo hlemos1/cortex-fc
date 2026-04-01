@@ -8,6 +8,7 @@ import {
 } from "@/db/queries";
 import { notifyMentions } from "@/lib/notifications";
 import { analyzeInput } from "@/lib/request-sanitizer";
+import { parseBody, scoutingCommentSchema } from "@/lib/api-schemas";
 
 // GET — list comments for a scouting target
 export async function GET(request: NextRequest) {
@@ -34,15 +35,9 @@ export async function POST(request: NextRequest) {
     const { session, error } = await requireAuth();
     if (error) return error;
 
-    const body = await request.json();
+    const { data: body, error: parseError } = await parseBody(request, scoutingCommentSchema);
+    if (parseError) return parseError;
     const { targetId, content } = body;
-
-    if (!targetId || !isValidUUID(targetId)) {
-      return NextResponse.json({ error: "targetId invalido" }, { status: 400 });
-    }
-    if (!content || typeof content !== "string" || content.trim().length === 0) {
-      return NextResponse.json({ error: "content obrigatorio" }, { status: 400 });
-    }
 
     const contentCheck = analyzeInput(content);
     if (!contentCheck.clean) {

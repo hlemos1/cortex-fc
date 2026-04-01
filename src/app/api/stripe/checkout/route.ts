@@ -6,6 +6,7 @@ import { db } from "@/db/index";
 import { organizations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "@/lib/logger";
+import { parseBody, checkoutSchema } from "@/lib/api-schemas";
 
 export async function POST(req: Request) {
   try {
@@ -26,10 +27,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const { tier, interval = "monthly" } = body as {
+    const { data: body, error: parseError } = await parseBody(req, checkoutSchema);
+    if (parseError) return parseError;
+    const { tier, interval } = body as {
       tier: TierKey;
-      interval?: BillingInterval;
+      interval: BillingInterval;
     };
 
     if (!tier || !PRICE_IDS[tier]) {

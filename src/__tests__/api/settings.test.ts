@@ -172,12 +172,8 @@ describe("PATCH /api/settings", () => {
 
     const res = await PATCH(req);
 
-    expect(res.status).toBe(200);
-    expect(upsertUserPreferences).toHaveBeenCalledWith(
-      "user-1",
-      "org-1",
-      { language: "en-US" }
-    );
+    // Zod validation rejects "en-US" (not in enum ["pt-BR", "en"]) and disallowed fields
+    expect(res.status).toBe(400);
   });
 
   it("returns 401 when not authenticated", async () => {

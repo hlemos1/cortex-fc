@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { getUserPreferences, upsertUserPreferences } from "@/db/queries";
+import { parseBody, settingsUpdateSchema } from "@/lib/api-schemas";
 
 /**
  * GET /api/settings — Return user preferences for current org
@@ -46,28 +47,14 @@ export async function PATCH(request: Request) {
     const { session, error } = await requireAuth();
     if (error) return error;
 
-    const body = await request.json();
+    const { data: body, error: parseError } = await parseBody(request, settingsUpdateSchema);
+    if (parseError) return parseError;
 
-    // Whitelist allowed fields
-    const allowed: Record<string, boolean> = {
-      aiModel: true,
-      maxTokens: true,
-      temperature: true,
-      notifyContracts: true,
-      notifyReports: true,
-      notifyScouting: true,
-      notifyRisk: true,
-      density: true,
-      language: true,
-      soundEnabled: true,
-      hapticEnabled: true,
-      soundVolume: true,
-    };
-
+    // Remove undefined keys — only send fields actually provided
     const sanitized: Record<string, unknown> = {};
-    for (const key of Object.keys(body)) {
-      if (allowed[key]) {
-        sanitized[key] = body[key];
+    for (const [key, value] of Object.entries(body)) {
+      if (value !== undefined) {
+        sanitized[key] = value;
       }
     }
 
