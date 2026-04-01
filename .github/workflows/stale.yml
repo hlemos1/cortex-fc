@@ -1,0 +1,23 @@
+name: Stale
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-stale: 30
+          days-before-close: 7
+          stale-issue-message: 'Sem atividade ha 30 dias. Fechando em 7 dias se nao houver update.'
+          stale-pr-message: 'PR sem atividade ha 30 dias. Fechando em 7 dias se nao houver update.'
+          stale-issue-label: 'stale'
+          stale-pr-label: 'stale'

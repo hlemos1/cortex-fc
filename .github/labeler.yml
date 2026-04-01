@@ -1,0 +1,29 @@
+frontend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/components/**'
+      - 'src/app/**'
+
+backend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/api/**'
+      - 'src/db/**'
+      - 'src/lib/**'
+
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.test.*'
+      - '**/*.spec.*'
+      - 'e2e/**'
+
+docs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'
