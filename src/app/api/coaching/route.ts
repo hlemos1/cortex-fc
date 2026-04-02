@@ -7,7 +7,7 @@ import { canUseAgent, checkAgentQuota } from "@/lib/feature-gates";
 import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
 import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
-import { parseBody, agentRequestSchema } from "@/lib/api-schemas";
+import { parseBody, coachingAgentSchema } from "@/lib/api-schemas";
 
 const VALID_POSITIONS = ["GK", "CB", "FB", "DM", "CM", "AM", "W", "ST"];
 
@@ -55,9 +55,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: validatedBody, error: parseError } = await parseBody(req, agentRequestSchema);
+    const { data: body, error: parseError } = await parseBody(req, coachingAgentSchema);
     if (parseError) return parseError;
-    const body = validatedBody as Record<string, any>;
     const {
       playerId,
       playerName,
@@ -123,14 +122,14 @@ export async function POST(req: Request) {
       agentResult = await runCoachingAssist({
         playerId,
         playerName,
-        position,
+        position: position as any,
         age,
         currentClub: currentClub ?? "",
         strengths,
         weaknesses,
         targetRole,
         formationContext,
-        developmentHorizon,
+        developmentHorizon: developmentHorizon as any,
         additionalContext,
       }, model);
     } finally {

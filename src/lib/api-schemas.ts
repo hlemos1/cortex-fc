@@ -124,18 +124,61 @@ export const scoutAgentSchema = agentRequestSchema.extend({
   mustHaveTraits: z.array(shortTextSchema).max(10).optional(),
 });
 
-// --- COACHING (campos especificos) ---
+// --- ANALISTA (campos de analise tatica) ---
 
-export const coachingAgentSchema = z.object({
-  playerId: uuidSchema.optional(),
-  playerName: nameSchema.optional(),
-  position: shortTextSchema.optional(),
-  situation: z.string().min(1, "Situacao obrigatoria").max(5000),
+export const analistaAgentSchema = agentRequestSchema.extend({
+  matchId: uuidSchema.optional(),
+  homeTeam: shortTextSchema.optional(),
+  awayTeam: shortTextSchema.optional(),
+  competition: shortTextSchema.optional(),
+  formation: shortTextSchema.optional(),
+  focusPlayerIds: z.array(uuidSchema).max(30).optional(),
+  matchEvents: z.record(z.string(), z.unknown()).optional(),
+  statsData: z.record(z.string(), z.unknown()).optional(),
+  additionalContext: textSchema.optional(),
+});
+
+// --- BOARD ADVISOR (campos de hiring matrix) ---
+
+export const boardAgentSchema = agentRequestSchema.extend({
+  clubName: shortTextSchema.optional(),
+  currentBudget: nonNegativeSchema.optional(),
+  salaryCap: nonNegativeSchema.optional(),
+  strategicGoals: z.array(shortTextSchema).max(10).optional(),
+  currentSquadAssessment: shortTextSchema.optional(),
+  windowType: z.enum(["summer", "winter"]).optional(),
+  leagueContext: shortTextSchema.optional(),
+  existingTargets: z.array(shortTextSchema).max(20).optional(),
+  competitorsActivity: shortTextSchema.optional(),
+  financialConstraints: shortTextSchema.optional(),
+  additionalContext: textSchema.optional(),
+});
+
+// --- CFO MODELER (campos financeiros) ---
+
+export const cfoAgentSchema = agentRequestSchema.extend({
+  proposedFee: nonNegativeSchema.optional(),
+  proposedSalary: nonNegativeSchema.optional(),
+  sellingClubAsk: nonNegativeSchema.optional(),
+  contractYears: z.number().int().min(1).max(10).optional(),
+  agentFeePercent: z.number().min(0).max(30).optional(),
+  signingBonus: nonNegativeSchema.optional(),
+  performanceBonuses: z.unknown().optional(),
+  additionalContext: textSchema.optional(),
+});
+
+// --- COACHING (herda do agent base + campos especificos) ---
+
+export const coachingAgentSchema = agentRequestSchema.extend({
+  situation: z.string().max(5000).optional(),
+  strengths: z.array(shortTextSchema).max(20).optional(),
+  weaknesses: z.array(shortTextSchema).max(20).optional(),
+  targetRole: shortTextSchema.optional(),
+  formationContext: shortTextSchema.optional(),
+  developmentHorizon: shortTextSchema.optional(),
+  additionalContext: textSchema.optional(),
   responseType: z.enum(["short", "medium", "long"]).optional(),
   language: z.enum(["pt-BR", "en"]).optional(),
-  model: z.string().max(100).optional(),
-  prompt: textSchema.optional(),
-  context: textSchema.optional(),
 });
 
 export const chatRequestSchema = z.object({

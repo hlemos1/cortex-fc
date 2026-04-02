@@ -9,7 +9,7 @@ import type { ScoutInput } from "@/types/cortex";
 import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
 import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
-import { parseBody, agentRequestSchema } from "@/lib/api-schemas";
+import { parseBody, scoutAgentSchema } from "@/lib/api-schemas";
 
 const VALID_POSITIONS = ["GK", "CB", "FB", "DM", "CM", "AM", "W", "ST"];
 
@@ -58,9 +58,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: validatedBody, error: parseError } = await parseBody(request, agentRequestSchema);
+    const { data: body, error: parseError } = await parseBody(request, scoutAgentSchema);
     if (parseError) return parseError;
-    const body = validatedBody as Record<string, any>;
 
     // Model selection with tier validation
     const model = body.model || getDefaultModel(session!.tier);
@@ -89,7 +88,7 @@ export async function POST(request: Request) {
     }
 
     const input: ScoutInput = {
-      position: body.position,
+      position: body.position as any,
       ageRange: [body.ageRange[0], body.ageRange[1]],
       budgetMax: body.budgetMax,
       style: body.style.slice(0, 500),
