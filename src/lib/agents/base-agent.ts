@@ -41,12 +41,50 @@ const RETRY_DELAY_MS = 2000;
 const FALLBACK_MODEL = "claude-haiku-4-5-20251001";
 
 /**
+ * Extract JSON from LLM response text.
+ * Tries: fenced code block → raw JSON object → fallback to raw text.
+ * Fowler: Extract Function — duplicated in callAgent, callAgentStreaming, callAgentWithTools.
+ */
+function parseJsonFromResponse<T>(rawText: string): T {
+  try {
+    const jsonMatch =
+      rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || rawText.match(/(\{[\s\S]*\})/);
+    const jsonStr = jsonMatch ? jsonMatch[1].trim() : rawText.trim();
+    return JSON.parse(jsonStr);
+  } catch {
+    return { raw: rawText } as T;
+  }
+}
+
+/**
+ * Build AgentResult from usage data.
+ * Fowler: Extract Function — duplicated cost calculation.
+ */
+function buildAgentResult<T>(
+  data: T,
+  rawText: string,
+  inputTokens: number,
+  outputTokens: number,
+  model: string,
+  startTime: number
+): AgentResult<T> {
+  return {
+    data,
+    reasoning: rawText,
+    tokensUsed: inputTokens + outputTokens,
+    inputTokens,
+    outputTokens,
+    costUsd: calculateCost(model, inputTokens, outputTokens),
+    durationMs: Date.now() - startTime,
+    model,
+  };
+}
+
+/**
  * Base agent call pattern with retry and timeout.
  * All 6 CORTEX FC agents use this to call the LLM.
  */
-export async function callAgent<T>(
-  options: AgentCallOptions
-): Promise<AgentResult<T>> {
+export async function callAgent<T>(options: AgentCallOptions): Promise<AgentResult<T>> {
   const {
     systemPrompt,
     userMessage,
@@ -87,33 +125,11 @@ export async function callAgent<T>(
       const textBlock = response.content.find((block) => block.type === "text");
       const rawText = textBlock && "text" in textBlock ? textBlock.text : "";
 
-      // Parse JSON from response
-      let data: T;
-      try {
-        const jsonMatch =
-          rawText.match(/```(?:json)?\s*([\s\S]*?)```/) ||
-          rawText.match(/(\{[\s\S]*\})/);
-        const jsonStr = jsonMatch ? jsonMatch[1].trim() : rawText.trim();
-        data = JSON.parse(jsonStr);
-      } catch {
-        data = { raw: rawText } as T;
-      }
-
+      const data = parseJsonFromResponse<T>(rawText);
       const inputTokens = response.usage?.input_tokens ?? 0;
       const outputTokens = response.usage?.output_tokens ?? 0;
-      const tokensUsed = inputTokens + outputTokens;
-      const costUsd = calculateCost(model, inputTokens, outputTokens);
 
-      return {
-        data,
-        reasoning: rawText,
-        tokensUsed,
-        inputTokens,
-        outputTokens,
-        costUsd,
-        durationMs,
-        model,
-      };
+      return buildAgentResult(data, rawText, inputTokens, outputTokens, model, start);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
 
@@ -125,9 +141,7 @@ export async function callAgent<T>(
         lastError.message.includes("overloaded");
 
       if (attempt < MAX_RETRIES && isRetryable) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1))
-        );
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
         continue;
       }
 
@@ -151,62 +165,44 @@ export async function callAgentStreaming<T>({
   onToken,
   onComplete,
 }: {
-  agentType: string
-  systemPrompt: string
-  userMessage: string
-  model?: string
-  maxTokens?: number
-  onToken?: (text: string) => void
-  onComplete?: (fullText: string) => void
+  agentType: string;
+  systemPrompt: string;
+  userMessage: string;
+  model?: string;
+  maxTokens?: number;
+  onToken?: (text: string) => void;
+  onComplete?: (fullText: string) => void;
 }): Promise<AgentResult<T>> {
-  const anthropic = new Anthropic()
-  const resolvedModel = model || "claude-sonnet-4-20250514"
-  const start = Date.now()
+  const anthropic = new Anthropic();
+  const resolvedModel = model || "claude-sonnet-4-20250514";
+  const start = Date.now();
 
   const stream = anthropic.messages.stream({
     model: resolvedModel,
     max_tokens: maxTokens || 4096,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
-  })
+  });
 
-  let fullText = ""
+  let fullText = "";
 
   for await (const event of stream) {
     if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-      fullText += event.delta.text
-      onToken?.(event.delta.text)
+      fullText += event.delta.text;
+      onToken?.(event.delta.text);
     }
   }
 
-  onComplete?.(fullText)
+  onComplete?.(fullText);
 
   // Extract usage from the final message
-  const finalMessage = await stream.finalMessage()
-  const inputTokens = finalMessage.usage?.input_tokens ?? 0
-  const outputTokens = finalMessage.usage?.output_tokens ?? 0
-  const tokensUsed = inputTokens + outputTokens
-  const costUsd = calculateCost(resolvedModel, inputTokens, outputTokens)
-  const durationMs = Date.now() - start
+  const finalMessage = await stream.finalMessage();
+  const inputTokens = finalMessage.usage?.input_tokens ?? 0;
+  const outputTokens = finalMessage.usage?.output_tokens ?? 0;
 
-  // Parse JSON from the accumulated text
-  const jsonMatch =
-    fullText.match(/```(?:json)?\s*([\s\S]*?)```/) ||
-    fullText.match(/(\{[\s\S]*\})/);
-  if (!jsonMatch) throw new Error("No JSON found in response");
-  const jsonStr = jsonMatch[1].trim();
-  const data = JSON.parse(jsonStr) as T
+  const data = parseJsonFromResponse<T>(fullText);
 
-  return {
-    data,
-    reasoning: fullText,
-    tokensUsed,
-    inputTokens,
-    outputTokens,
-    costUsd,
-    durationMs,
-    model: resolvedModel,
-  }
+  return buildAgentResult(data, fullText, inputTokens, outputTokens, resolvedModel, start);
 }
 
 /**
@@ -231,10 +227,7 @@ export async function callAgentWithTools<T>({
   systemPrompt: string;
   userMessage: string;
   tools: Tool[];
-  executeToolFn: (
-    name: string,
-    input: Record<string, unknown>
-  ) => Promise<string>;
+  executeToolFn: (name: string, input: Record<string, unknown>) => Promise<string>;
   model?: string;
   maxTokens?: number;
 }): Promise<AgentResult<T>> {
@@ -273,30 +266,16 @@ export async function callAgentWithTools<T>({
       }
 
       const rawText = textBlock.text;
-      let data: T;
-      try {
-        const jsonMatch =
-          rawText.match(/```(?:json)?\s*([\s\S]*?)```/) ||
-          rawText.match(/(\{[\s\S]*\})/);
-        const jsonStr = jsonMatch ? jsonMatch[1].trim() : rawText.trim();
-        data = JSON.parse(jsonStr);
-      } catch {
-        data = { raw: rawText } as T;
-      }
+      const data = parseJsonFromResponse<T>(rawText);
 
-      const tokensUsed = totalInputTokens + totalOutputTokens;
-      const costUsd = calculateCost(resolvedModel, totalInputTokens, totalOutputTokens);
-
-      return {
+      return buildAgentResult(
         data,
-        reasoning: rawText,
-        tokensUsed,
-        inputTokens: totalInputTokens,
-        outputTokens: totalOutputTokens,
-        costUsd,
-        durationMs: Date.now() - start,
-        model: resolvedModel,
-      };
+        rawText,
+        totalInputTokens,
+        totalOutputTokens,
+        resolvedModel,
+        start
+      );
     }
 
     // Execute tool calls and add results to conversation
@@ -305,10 +284,7 @@ export async function callAgentWithTools<T>({
     const toolResults = await Promise.all(
       toolUseBlocks.map(async (block) => {
         if (block.type !== "tool_use") return null;
-        const result = await executeToolFn(
-          block.name,
-          block.input as Record<string, unknown>
-        );
+        const result = await executeToolFn(block.name, block.input as Record<string, unknown>);
         return {
           type: "tool_result" as const,
           tool_use_id: block.id,
@@ -325,9 +301,7 @@ export async function callAgentWithTools<T>({
     attempts++;
   }
 
-  throw new Error(
-    `[${agentType}] Max tool use attempts (${maxAttempts}) reached`
-  );
+  throw new Error(`[${agentType}] Max tool use attempts (${maxAttempts}) reached`);
 }
 
 /**
@@ -337,7 +311,7 @@ export async function callAgentWithTools<T>({
  * On second failure: falls back to cheapest model (Haiku) as last resort.
  */
 export async function callAgentWithRetry<T>(
-  config: AgentCallOptions & { fallbackModel?: string },
+  config: AgentCallOptions & { fallbackModel?: string }
 ): Promise<AgentResult<T>> {
   try {
     return await callAgent<T>(config);
