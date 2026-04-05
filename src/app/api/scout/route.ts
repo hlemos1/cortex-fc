@@ -5,7 +5,7 @@ import { checkAgentRateLimits } from "@/lib/rate-limit";
 import { canUseAgent, checkAgentQuota } from "@/lib/feature-gates";
 import { runScout } from "@/lib/agents/scout-agent";
 import { createAgentRun } from "@/db/queries";
-import type { ScoutInput } from "@/types/cortex";
+import type { ScoutInput, PlayerCluster } from "@/types/cortex";
 import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
 import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
@@ -20,15 +20,15 @@ export async function POST(request: Request) {
 
     // RBAC check
     if (!hasPermission(session!.role, "use_agents")) {
-      return NextResponse.json(
-        { error: "Sem permissao para usar agentes IA" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Sem permissao para usar agentes IA" }, { status: 403 });
     }
 
     if (!canUseAgent(session!.tier, "SCOUT")) {
       return NextResponse.json(
-        { error: "Seu plano nao inclui acesso ao agente SCOUT. Faca upgrade para o plano Club Professional." },
+        {
+          error:
+            "Seu plano nao inclui acesso ao agente SCOUT. Faca upgrade para o plano Club Professional.",
+        },
         { status: 403 }
       );
     }
@@ -38,7 +38,8 @@ export async function POST(request: Request) {
     if (!agentQuota.allowed) {
       return NextResponse.json(
         {
-          error: "Limite de execucoes de agente atingido para este mes. Faca upgrade para continuar.",
+          error:
+            "Limite de execucoes de agente atingido para este mes. Faca upgrade para continuar.",
           usage: agentQuota.usage,
           limit: agentQuota.limit,
         },
@@ -49,12 +50,16 @@ export async function POST(request: Request) {
     // Rate limit (user + org)
     const rateCheck = await checkAgentRateLimits(session!.userId, session!.orgId);
     if (!rateCheck.allowed) {
-      const msg = rateCheck.limitType === "org"
-        ? "Limite de chamadas IA da organizacao atingido. Tente novamente em breve."
-        : "Limite de chamadas IA atingido. Tente novamente em 1 minuto.";
+      const msg =
+        rateCheck.limitType === "org"
+          ? "Limite de chamadas IA da organizacao atingido. Tente novamente em breve."
+          : "Limite de chamadas IA atingido. Tente novamente em 1 minuto.";
       return NextResponse.json(
         { error: msg, retryAfter: rateCheck.retryAfter },
-        { status: 429, headers: rateCheck.retryAfter ? { "Retry-After": String(rateCheck.retryAfter) } : {} }
+        {
+          status: 429,
+          headers: rateCheck.retryAfter ? { "Retry-After": String(rateCheck.retryAfter) } : {},
+        }
       );
     }
 
@@ -64,10 +69,7 @@ export async function POST(request: Request) {
     // Model selection with tier validation
     const model = body.model || getDefaultModel(session!.tier);
     if (!canUseModel(session!.tier, model)) {
-      return NextResponse.json(
-        { error: "Model not available for your tier" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Model not available for your tier" }, { status: 403 });
     }
 
     // Validate input
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
     }
 
     const input: ScoutInput = {
-      position: body.position as any,
+      position: body.position as PlayerCluster,
       ageRange: [body.ageRange[0], body.ageRange[1]],
       budgetMax: body.budgetMax,
       style: body.style.slice(0, 500),
@@ -149,9 +151,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("SCOUT agent error:", error);
-    return NextResponse.json(
-      { error: "Erro ao executar agente SCOUT" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erro ao executar agente SCOUT" }, { status: 500 });
   }
 }

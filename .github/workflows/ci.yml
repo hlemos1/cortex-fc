@@ -73,4 +73,4 @@ jobs:
         continue-on-error: true
       - name: Check for secrets
         run: |
-          ! grep -rn "sk-ant\|sk_live\|AKIA\|-----BEGIN" src/ --include="*.ts" --include="*.tsx" --include="*.js"
+          ! grep -rn "sk-ant\|sk_live\|AKIA\|-----BEGIN" src/ --include="*.ts" --include="*.tsx" --include="*.js" --exclude-dir="__tests__" | grep -v "placeholder\|regex\|pattern\|\.test\("

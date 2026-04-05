@@ -8,6 +8,7 @@ import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
 import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
 import { parseBody, coachingAgentSchema } from "@/lib/api-schemas";
+import type { PlayerCluster, CoachingAssistInput } from "@/types/cortex";
 
 const VALID_POSITIONS = ["GK", "CB", "FB", "DM", "CM", "AM", "W", "ST"];
 
@@ -17,15 +18,15 @@ export async function POST(req: Request) {
     if (error) return error;
 
     if (!hasPermission(session!.role, "use_agents")) {
-      return NextResponse.json(
-        { error: "Sem permissao para usar agentes IA" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Sem permissao para usar agentes IA" }, { status: 403 });
     }
 
     if (!canUseAgent(session!.tier, "COACHING_ASSIST")) {
       return NextResponse.json(
-        { error: "Seu plano nao inclui acesso ao COACHING ASSIST. Faca upgrade para club_professional." },
+        {
+          error:
+            "Seu plano nao inclui acesso ao COACHING ASSIST. Faca upgrade para club_professional.",
+        },
         { status: 403 }
       );
     }
@@ -35,7 +36,8 @@ export async function POST(req: Request) {
     if (!agentQuota.allowed) {
       return NextResponse.json(
         {
-          error: "Limite de execucoes de agente atingido para este mes. Faca upgrade para continuar.",
+          error:
+            "Limite de execucoes de agente atingido para este mes. Faca upgrade para continuar.",
           usage: agentQuota.usage,
           limit: agentQuota.limit,
         },
@@ -46,12 +48,16 @@ export async function POST(req: Request) {
     // Rate limit (user + org)
     const rateCheck = await checkAgentRateLimits(session!.userId, session!.orgId);
     if (!rateCheck.allowed) {
-      const msg = rateCheck.limitType === "org"
-        ? "Limite de chamadas IA da organizacao atingido. Tente novamente em breve."
-        : "Limite de chamadas IA atingido. Tente novamente em 1 minuto.";
+      const msg =
+        rateCheck.limitType === "org"
+          ? "Limite de chamadas IA da organizacao atingido. Tente novamente em breve."
+          : "Limite de chamadas IA atingido. Tente novamente em 1 minuto.";
       return NextResponse.json(
         { error: msg, retryAfter: rateCheck.retryAfter },
-        { status: 429, headers: rateCheck.retryAfter ? { "Retry-After": String(rateCheck.retryAfter) } : {} }
+        {
+          status: 429,
+          headers: rateCheck.retryAfter ? { "Retry-After": String(rateCheck.retryAfter) } : {},
+        }
       );
     }
 
@@ -74,15 +80,23 @@ export async function POST(req: Request) {
     // Model selection with tier validation
     const model = body.model || getDefaultModel(session!.tier);
     if (!canUseModel(session!.tier, model)) {
-      return NextResponse.json(
-        { error: "Model not available for your tier" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Model not available for your tier" }, { status: 403 });
     }
 
-    if (!playerId || !playerName || !position || !age || !targetRole || !strengths?.length || !weaknesses?.length) {
+    if (
+      !playerId ||
+      !playerName ||
+      !position ||
+      !age ||
+      !targetRole ||
+      !strengths?.length ||
+      !weaknesses?.length
+    ) {
       return NextResponse.json(
-        { error: "playerId, playerName, position, age, targetRole, strengths e weaknesses sao obrigatorios" },
+        {
+          error:
+            "playerId, playerName, position, age, targetRole, strengths e weaknesses sao obrigatorios",
+        },
         { status: 400 }
       );
     }
@@ -95,16 +109,18 @@ export async function POST(req: Request) {
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY nao configurada." },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: "ANTHROPIC_API_KEY nao configurada." }, { status: 503 });
     }
 
     const inputContext = { playerId, playerName, position, age, targetRole };
 
     // Check agent response cache
-    const cacheParams = { playerId, position, targetRole, developmentHorizon: developmentHorizon ?? "medium" };
+    const cacheParams = {
+      playerId,
+      position,
+      targetRole,
+      developmentHorizon: developmentHorizon ?? "medium",
+    };
     const cached = await getCachedAgentResponse("COACHING_ASSIST", cacheParams);
     if (cached) {
       return NextResponse.json({ data: cached, fromCache: true });
@@ -119,19 +135,22 @@ export async function POST(req: Request) {
 
     let agentResult;
     try {
-      agentResult = await runCoachingAssist({
-        playerId,
-        playerName,
-        position: position as any,
-        age,
-        currentClub: currentClub ?? "",
-        strengths,
-        weaknesses,
-        targetRole,
-        formationContext,
-        developmentHorizon: developmentHorizon as any,
-        additionalContext,
-      }, model);
+      agentResult = await runCoachingAssist(
+        {
+          playerId,
+          playerName,
+          position: position as PlayerCluster,
+          age,
+          currentClub: currentClub ?? "",
+          strengths,
+          weaknesses,
+          targetRole,
+          formationContext,
+          developmentHorizon: developmentHorizon as CoachingAssistInput["developmentHorizon"],
+          additionalContext,
+        },
+        model
+      );
     } finally {
       clearTimeout(timeout);
     }
@@ -185,8 +204,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("COACHING ASSIST agent error:", error);
 
-    const internalMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const internalMessage = error instanceof Error ? error.message : "Unknown error";
 
     const { session } = await requireAuth().catch(() => ({ session: null, error: null }));
     if (session) {
