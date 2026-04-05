@@ -1,27 +1,26 @@
-import NextAuth from "next-auth"
-import Credentials from "next-auth/providers/credentials"
-import Google from "next-auth/providers/google"
-import { db } from "@/db/index"
-import { users, organizations } from "@/db/schema"
-import { eq } from "drizzle-orm"
-import bcrypt from "bcryptjs"
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+import { db } from "@/db/index";
+import { users, organizations } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
-async function getOrCreateGoogleUser(profile: {
-  email: string
-  name: string
-  picture?: string
-}) {
+async function getOrCreateGoogleUser(profile: { email: string; name: string; picture?: string }) {
   // Check if user already exists
   let user = await db.query.users.findFirst({
     where: eq(users.email, profile.email),
-  })
+  });
 
   if (!user) {
     // Create org for new Google user
     const slug =
-      profile.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") +
+      profile.name
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "") +
       "-" +
-      Date.now().toString(36)
+      Date.now().toString(36);
 
     const [org] = await db
       .insert(organizations)
@@ -30,7 +29,7 @@ async function getOrCreateGoogleUser(profile: {
         slug,
         tier: "free",
       })
-      .returning()
+      .returning();
 
     // Create user (no password needed for Google users, email auto-verified)
     const [newUser] = await db
@@ -44,21 +43,21 @@ async function getOrCreateGoogleUser(profile: {
         role: "admin",
         emailVerified: new Date(),
       })
-      .returning()
+      .returning();
 
-    user = newUser
+    user = newUser;
   }
 
   // Get org name
-  let orgName = ""
+  let orgName = "";
   if (user.orgId) {
     const org = await db.query.organizations.findFirst({
       where: eq(organizations.id, user.orgId),
-    })
-    orgName = org?.name ?? ""
+    });
+    orgName = org?.name ?? "";
   }
 
-  return { user, orgName }
+  return { user, orgName };
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -77,17 +76,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: profile.email,
           name: profile.name ?? user.name ?? "Usuario",
           picture: (profile as { picture?: string }).picture,
-        })
+        });
       }
-      return true
+      return true;
     },
     async jwt({ token, user, account, profile }) {
       // On initial sign-in
       if (user && account?.provider === "credentials") {
-        token.id = user.id
-        token.role = user.role
-        token.orgId = user.orgId
-        token.orgName = user.orgName
+        token.id = user.id;
+        token.role = user.role;
+        token.orgId = user.orgId;
+        token.orgName = user.orgName;
       }
 
       // For Google sign-in, load from DB
@@ -96,29 +95,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: profile.email,
           name: profile.name ?? "Usuario",
           picture: (profile as { picture?: string }).picture,
-        })
-        token.id = result.user.id
-        token.role = result.user.role
-        token.orgId = result.user.orgId ?? ""
-        token.orgName = result.orgName
+        });
+        token.id = result.user.id;
+        token.role = result.user.role;
+        token.orgId = result.user.orgId ?? "";
+        token.orgName = result.orgName;
       }
 
-      return token
+      return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string
-        session.user.role = token.role as string
-        session.user.orgId = token.orgId as string
-        session.user.orgName = token.orgName as string
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.orgId = token.orgId as string;
+        session.user.orgName = token.orgName as string;
       }
-      return session
+      return session;
     },
   },
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!.trim(),
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
+      clientId: process.env.GOOGLE_CLIENT_ID?.trim() ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() ?? "",
       authorization: {
         params: {
           prompt: "select_account",
@@ -132,33 +131,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null
+        if (!credentials?.email || !credentials?.password) return null;
 
-        const email = credentials.email as string
-        const password = credentials.password as string
+        const email = credentials.email as string;
+        const password = credentials.password as string;
 
         const user = await db.query.users.findFirst({
           where: eq(users.email, email),
-        })
+        });
 
-        if (!user) return null
-        if (user.passwordHash === "__google_oauth__") return null
+        if (!user) return null;
+        if (user.passwordHash === "__google_oauth__") return null;
 
-        const isValid = await bcrypt.compare(password, user.passwordHash)
-        if (!isValid) return null
+        const isValid = await bcrypt.compare(password, user.passwordHash);
+        if (!isValid) return null;
 
         // Check email verification (skip for existing users without the field)
         if (user.verificationToken && !user.emailVerified) {
-          return null
+          return null;
         }
 
         // Get org name
-        let orgName = ""
+        let orgName = "";
         if (user.orgId) {
           const org = await db.query.organizations.findFirst({
             where: eq(organizations.id, user.orgId),
-          })
-          orgName = org?.name ?? ""
+          });
+          orgName = org?.name ?? "";
         }
 
         return {
@@ -168,8 +167,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           orgId: user.orgId ?? "",
           orgName,
-        }
+        };
       },
     }),
   ],
-})
+});
