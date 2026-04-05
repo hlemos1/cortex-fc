@@ -1,77 +1,16 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
-import { hasPermission } from "@/lib/rbac";
-import { checkAgentRateLimits } from "@/lib/rate-limit";
-import { canUseAgent, checkAgentQuota } from "@/lib/feature-gates";
 import { runScout } from "@/lib/agents/scout-agent";
 import { createAgentRun } from "@/db/queries";
 import type { ScoutInput, PlayerCluster } from "@/types/cortex";
-import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
 import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
-import { parseBody, scoutAgentSchema } from "@/lib/api-schemas";
+import { scoutAgentSchema } from "@/lib/api-schemas";
+import { withAgentAuth } from "@/lib/agents/agent-middleware";
 
 const VALID_POSITIONS = ["GK", "CB", "FB", "DM", "CM", "AM", "W", "ST"];
 
 export async function POST(request: Request) {
-  try {
-    const { session, error } = await requireAuth();
-    if (error) return error;
-
-    // RBAC check
-    if (!hasPermission(session!.role, "use_agents")) {
-      return NextResponse.json({ error: "Sem permissao para usar agentes IA" }, { status: 403 });
-    }
-
-    if (!canUseAgent(session!.tier, "SCOUT")) {
-      return NextResponse.json(
-        {
-          error:
-            "Seu plano nao inclui acesso ao agente SCOUT. Faca upgrade para o plano Club Professional.",
-        },
-        { status: 403 }
-      );
-    }
-
-    // Quota check: agent runs per month
-    const agentQuota = await checkAgentQuota(session!.orgId, session!.tier);
-    if (!agentQuota.allowed) {
-      return NextResponse.json(
-        {
-          error:
-            "Limite de execucoes de agente atingido para este mes. Faca upgrade para continuar.",
-          usage: agentQuota.usage,
-          limit: agentQuota.limit,
-        },
-        { status: 429 }
-      );
-    }
-
-    // Rate limit (user + org)
-    const rateCheck = await checkAgentRateLimits(session!.userId, session!.orgId);
-    if (!rateCheck.allowed) {
-      const msg =
-        rateCheck.limitType === "org"
-          ? "Limite de chamadas IA da organizacao atingido. Tente novamente em breve."
-          : "Limite de chamadas IA atingido. Tente novamente em 1 minuto.";
-      return NextResponse.json(
-        { error: msg, retryAfter: rateCheck.retryAfter },
-        {
-          status: 429,
-          headers: rateCheck.retryAfter ? { "Retry-After": String(rateCheck.retryAfter) } : {},
-        }
-      );
-    }
-
-    const { data: body, error: parseError } = await parseBody(request, scoutAgentSchema);
-    if (parseError) return parseError;
-
-    // Model selection with tier validation
-    const model = body.model || getDefaultModel(session!.tier);
-    if (!canUseModel(session!.tier, model)) {
-      return NextResponse.json({ error: "Model not available for your tier" }, { status: 403 });
-    }
-
+  return withAgentAuth(request, "SCOUT", scoutAgentSchema, async (session, body, model) => {
     // Validate input
     if (!body.position || !VALID_POSITIONS.includes(body.position)) {
       return NextResponse.json({ error: "Posicao invalida" }, { status: 400 });
@@ -116,8 +55,8 @@ export async function POST(request: Request) {
       tokensUsed: agentResult.tokensUsed,
       durationMs: agentResult.durationMs,
       success: true,
-      userId: session!.userId,
-      orgId: session!.orgId,
+      userId: session.userId,
+      orgId: session.orgId,
     }).catch(() => null);
 
     // Cache the successful result
@@ -129,8 +68,8 @@ export async function POST(request: Request) {
         name: "cortex/agent.completed",
         data: {
           agentType: "SCOUT",
-          orgId: session!.orgId,
-          userId: session!.userId,
+          orgId: session.orgId,
+          userId: session.userId,
           runId: agentRun?.id ?? "",
         },
       });
@@ -149,8 +88,5 @@ export async function POST(request: Request) {
         durationMs: agentResult.durationMs,
       },
     });
-  } catch (error) {
-    console.error("SCOUT agent error:", error);
-    return NextResponse.json({ error: "Erro ao executar agente SCOUT" }, { status: 500 });
-  }
+  });
 }

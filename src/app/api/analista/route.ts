@@ -1,69 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
-import { canUseAgent, checkAgentQuota } from "@/lib/feature-gates";
-import { hasPermission } from "@/lib/rbac";
-import { checkAgentRateLimits } from "@/lib/rate-limit";
 import { runAnalista } from "@/lib/agents/analista-agent";
 import { createAgentRun } from "@/db/queries";
 import type { AnalistaInput } from "@/types/cortex";
-import { canUseModel, getDefaultModel } from "@/lib/ai-models";
 import { inngest } from "@/lib/inngest-client";
 import { getCachedAgentResponse, setCachedAgentResponse, TTL } from "@/lib/cache";
-import { parseBody, analistaAgentSchema } from "@/lib/api-schemas";
+import { analistaAgentSchema } from "@/lib/api-schemas";
+import { withAgentAuth } from "@/lib/agents/agent-middleware";
 
 export async function POST(request: Request) {
-  try {
-    const { session, error } = await requireAuth();
-    if (error) return error;
-
-    if (!hasPermission(session!.role, "use_agents")) {
-      return NextResponse.json({ error: "Sem permissao para usar agentes" }, { status: 403 });
-    }
-
-    if (!canUseAgent(session!.tier, "ANALISTA")) {
-      return NextResponse.json(
-        { error: "Seu plano nao inclui acesso ao agente ANALISTA. Faca upgrade para o plano Club Professional." },
-        { status: 403 }
-      );
-    }
-
-    // Quota check: agent runs per month
-    const agentQuota = await checkAgentQuota(session!.orgId, session!.tier);
-    if (!agentQuota.allowed) {
-      return NextResponse.json(
-        {
-          error: "Limite de execucoes de agente atingido para este mes. Faca upgrade para continuar.",
-          usage: agentQuota.usage,
-          limit: agentQuota.limit,
-        },
-        { status: 429 }
-      );
-    }
-
-    // Rate limit (user + org)
-    const rateCheck = await checkAgentRateLimits(session!.userId, session!.orgId);
-    if (!rateCheck.allowed) {
-      const msg = rateCheck.limitType === "org"
-        ? "Limite de chamadas IA da organizacao atingido. Tente novamente em breve."
-        : "Limite de chamadas IA atingido. Tente novamente em 1 minuto.";
-      return NextResponse.json(
-        { error: msg, retryAfter: rateCheck.retryAfter },
-        { status: 429, headers: rateCheck.retryAfter ? { "Retry-After": String(rateCheck.retryAfter) } : {} }
-      );
-    }
-
-    const { data: body, error: parseError } = await parseBody(request, analistaAgentSchema);
-    if (parseError) return parseError;
-
-    // Model selection with tier validation
-    const model = body.model || getDefaultModel(session!.tier);
-    if (!canUseModel(session!.tier, model)) {
-      return NextResponse.json(
-        { error: "Model not available for your tier" },
-        { status: 403 }
-      );
-    }
-
+  return withAgentAuth(request, "ANALISTA", analistaAgentSchema, async (session, body, model) => {
     if (!body.matchId || typeof body.matchId !== "string") {
       return NextResponse.json({ error: "matchId obrigatorio" }, { status: 400 });
     }
@@ -85,7 +30,11 @@ export async function POST(request: Request) {
     };
 
     // Check agent response cache
-    const cacheParams = { matchId: input.matchId, homeTeam: input.homeTeam, awayTeam: input.awayTeam };
+    const cacheParams = {
+      matchId: input.matchId,
+      homeTeam: input.homeTeam,
+      awayTeam: input.awayTeam,
+    };
     const cached = await getCachedAgentResponse("ANALISTA", cacheParams);
     if (cached) {
       return NextResponse.json({ data: cached, fromCache: true });
@@ -93,7 +42,6 @@ export async function POST(request: Request) {
 
     const agentResult = await runAnalista(input, model);
 
-    // Log agent run with real token usage
     const agentRun = await createAgentRun({
       agentType: "ANALISTA",
       inputContext: input as unknown as Record<string, unknown>,
@@ -102,21 +50,19 @@ export async function POST(request: Request) {
       tokensUsed: agentResult.tokensUsed,
       durationMs: agentResult.durationMs,
       success: true,
-      userId: session!.userId,
-      orgId: session!.orgId,
+      userId: session.userId,
+      orgId: session.orgId,
     }).catch(() => null);
 
-    // Cache the successful result
     await setCachedAgentResponse("ANALISTA", cacheParams, agentResult.data, TTL.DAY);
 
-    // Emit event for background processing (notifications, cache invalidation, webhooks)
     try {
       await inngest.send({
         name: "cortex/agent.completed",
         data: {
           agentType: "ANALISTA",
-          orgId: session!.orgId,
-          userId: session!.userId,
+          orgId: session.orgId,
+          userId: session.userId,
           runId: agentRun?.id ?? "",
         },
       });
@@ -135,11 +81,5 @@ export async function POST(request: Request) {
         durationMs: agentResult.durationMs,
       },
     });
-  } catch (error) {
-    console.error("ANALISTA agent error:", error);
-    return NextResponse.json(
-      { error: "Erro ao executar agente ANALISTA" },
-      { status: 500 }
-    );
-  }
+  });
 }
