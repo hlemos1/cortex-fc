@@ -1,3 +1,8 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+overrides:
+  picomatch@<=4.0.4: 4.0.4
+  yaml@<=2.8.3: 2.8.3
+  '@auth/core@<=0.41.1': 0.41.1
+  cjs-module-lexer@<=2.2.0: 2.2.0
